@@ -17,6 +17,11 @@ class TransactionRequest extends FormRequest
             'sub_category_id' => ['nullable','integer','exists:sub_categories,id'],
             'tags' => ['nullable','array'],
             'tags.*' => ['integer','exists:tags,id'],
+            // Suporte a múltiplas subcategorias (subs)
+            'subs' => ['nullable','array'],
+            'subs.*.value' => ['required_with:subs','numeric','min:0.01'],
+            'subs.*.category_id' => ['nullable','integer','exists:categories,id'],
+            'subs.*.sub_category_id' => ['nullable','integer','exists:sub_categories,id'],
         ];
         if ($this->input('transaction_type') === 'transfer') {
             $base['account_out_id'] = ['required','integer','different:account_id','exists:accounts,id'];

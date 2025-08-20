@@ -12,12 +12,13 @@ class TransactionController extends Controller
     {
         // Nova listagem baseada em parcels (transactions_installments)
         $q = TransactionInstallment::query()
-            ->with(['subs','tags','transaction'])
+            ->with(['subs.categoryLink.category','subs.categoryLink.subCategory','tags','transaction'])
             ->where('transactions_installments.user_id', auth('api')->id())
             ->join('transactions','transactions.id','=','transactions_installments.transaction_id')
             ->select([
                 'transactions_installments.*',
                 'transactions.date as transaction_date',
+                'transactions.notes as transaction_notes',
                 'transactions.transaction_type_id as root_transaction_type_id',
                 'transactions.account_out_id as root_account_out_id',
                 'transactions.account_id as root_account_id',
@@ -50,10 +51,16 @@ class TransactionController extends Controller
                 'account_id' => $inst->account_id,
                 'transaction_id' => $inst->transaction_id,
                 'date' => (string) $inst->transaction_date,
+                'notes' => $inst->transaction_notes,
                 'root_transaction_type_id' => $inst->root_transaction_type_id,
                 'account_out_id' => $inst->root_account_out_id,
                 'root_account_id' => $inst->root_account_id,
-                'subs' => $inst->subs->map(fn($s)=>['id'=>$s->id,'value'=>$s->value]),
+                'subs' => $inst->subs->map(fn($s)=>[
+                    'id'=>$s->id,
+                    'value'=>$s->value,
+                    'category_id' => optional($s->categoryLink)->category_id,
+                    'sub_category_id' => optional($s->categoryLink)->sub_category_id,
+                ]),
                 'tags' => $inst->tags->map(fn($t)=>['id'=>$t->tag_id ?? $t->id]),
             ];
         });
@@ -98,16 +105,33 @@ class TransactionController extends Controller
                 ]);
 
                 foreach ([$inInst,$outInst] as $inst) {
-                    $sub = TransactionSub::create([
-                        'transactions_installments_id' => $inst->id,
-                        'value' => $inst->value,
-                    ]);
-                    if ($inst->transaction_type_id === $incomeId && $request->filled('category_id')) {
-                        TransactionCategory::create([
-                            'transactions_sub_id' => $sub->id,
-                            'category_id' => $request->category_id,
-                            'sub_category_id' => $request->sub_category_id,
+                    // Se o request trouxer subs, criá-los proporcionalmente (apenas para a parcela de entrada?)
+                    if ($request->filled('subs') && is_array($request->subs) && $inst->transaction_type_id === $incomeId) {
+                        foreach ($request->subs as $subPayload) {
+                            $sub = TransactionSub::create([
+                                'transactions_installments_id' => $inst->id,
+                                'value' => $subPayload['value'],
+                            ]);
+                            if (!empty($subPayload['category_id'])) {
+                                TransactionCategory::create([
+                                    'transactions_sub_id' => $sub->id,
+                                    'category_id' => $subPayload['category_id'],
+                                    'sub_category_id' => $subPayload['sub_category_id'] ?? null,
+                                ]);
+                            }
+                        }
+                    } else {
+                        $sub = TransactionSub::create([
+                            'transactions_installments_id' => $inst->id,
+                            'value' => $inst->value,
                         ]);
+                        if ($inst->transaction_type_id === $incomeId && $request->filled('category_id')) {
+                            TransactionCategory::create([
+                                'transactions_sub_id' => $sub->id,
+                                'category_id' => $request->category_id,
+                                'sub_category_id' => $request->sub_category_id,
+                            ]);
+                        }
                     }
                     if ($request->filled('tags')) {
                         foreach ($request->tags as $tagId) {
@@ -126,16 +150,32 @@ class TransactionController extends Controller
                     'account_id' => $request->account_id,
                     'user_id' => $userId,
                 ]);
-                $sub = TransactionSub::create([
-                    'transactions_installments_id' => $inst->id,
-                    'value' => $inst->value,
-                ]);
-                if ($request->filled('category_id')) {
-                    TransactionCategory::create([
-                        'transactions_sub_id' => $sub->id,
-                        'category_id' => $request->category_id,
-                        'sub_category_id' => $request->sub_category_id,
+                if ($request->filled('subs') && is_array($request->subs)) {
+                    foreach ($request->subs as $subPayload) {
+                        $sub = TransactionSub::create([
+                            'transactions_installments_id' => $inst->id,
+                            'value' => $subPayload['value'],
+                        ]);
+                        if (!empty($subPayload['category_id'])) {
+                            TransactionCategory::create([
+                                'transactions_sub_id' => $sub->id,
+                                'category_id' => $subPayload['category_id'],
+                                'sub_category_id' => $subPayload['sub_category_id'] ?? null,
+                            ]);
+                        }
+                    }
+                } else {
+                    $sub = TransactionSub::create([
+                        'transactions_installments_id' => $inst->id,
+                        'value' => $inst->value,
                     ]);
+                    if ($request->filled('category_id')) {
+                        TransactionCategory::create([
+                            'transactions_sub_id' => $sub->id,
+                            'category_id' => $request->category_id,
+                            'sub_category_id' => $request->sub_category_id,
+                        ]);
+                    }
                 }
                 if ($request->filled('tags')) {
                     foreach ($request->tags as $tagId) {
@@ -148,7 +188,9 @@ class TransactionController extends Controller
             }
 
             // Retorna as parcelas criadas (uma ou duas) para o frontend já usar na listagem
-            $installments = TransactionInstallment::where('transaction_id',$tx->id)->with(['subs','tags'])->get();
+            $installments = TransactionInstallment::where('transaction_id',$tx->id)
+                ->with(['subs.categoryLink.category','subs.categoryLink.subCategory','tags'])
+                ->get();
             return response()->json([
                 'transaction_id' => $tx->id,
                 'date' => $tx->date->toDateString(),
@@ -159,7 +201,12 @@ class TransactionController extends Controller
                     'account_id' => $inst->account_id,
                     'transaction_id' => $inst->transaction_id,
                     'date' => $tx->date->toDateString(),
-                    'subs' => $inst->subs->map(fn($s)=>['id'=>$s->id,'value'=>$s->value]),
+                    'subs' => $inst->subs->map(fn($s)=>[
+                        'id'=>$s->id,
+                        'value'=>$s->value,
+                        'category_id' => optional($s->categoryLink)->category_id,
+                        'sub_category_id' => optional($s->categoryLink)->sub_category_id,
+                    ]),
                     'tags' => $inst->tags->map(fn($t)=>['id'=>$t->tag_id ?? $t->id]),
                 ]),
             ], 201);

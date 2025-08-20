@@ -83,7 +83,13 @@ export interface InstallmentListItem {
   root_transaction_type_id: number;
   account_out_id?: number | null;
   root_account_id?: number | null;
-  subs: Array<{ id: number; value: number }>;
+  notes?: string;
+  subs: Array<{
+    id: number;
+    value: number;
+    category_id?: number | null;
+    sub_category_id?: number | null;
+  }>;
   tags: Array<{ id: number }>;
 }
 export interface TransactionCreateResponse {
@@ -101,6 +107,11 @@ export interface TransactionCreatePayload {
   category_id?: number;
   sub_category_id?: number;
   tags?: number[];
+  subs?: Array<{
+    value: number;
+    category_id?: number;
+    sub_category_id?: number;
+  }>;
 }
 
 export const api = {

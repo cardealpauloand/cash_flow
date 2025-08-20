@@ -394,7 +394,7 @@ const TransactionsPage = () => {
                 initialData={{
                   id: String(editingTx.id),
                   type: mapType(editingTx.transaction_type_id),
-                  description: "",
+                  description: editingTx.notes || "",
                   amount: editingTx.value,
                   account: String(editingTx.account_id),
                   date: editingTx.date,
