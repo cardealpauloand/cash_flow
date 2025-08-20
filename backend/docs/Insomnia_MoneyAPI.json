@@ -1,0 +1,132 @@
+{
+    "_type": "export",
+    "__export_format": 4,
+    "__export_date": "2025-08-20T00:00:00.000Z",
+    "resources": [
+        {
+            "_id": "wrk_money_api",
+            "_type": "workspace",
+            "name": "Money API (Laravel JWT)"
+        },
+        {
+            "_id": "env_base",
+            "_type": "environment",
+            "parentId": "wrk_money_api",
+            "name": "Base Environment",
+            "data": { "baseUrl": "http://localhost:8000", "token": "" }
+        },
+        {
+            "_id": "fld_auth",
+            "_type": "request_group",
+            "parentId": "wrk_money_api",
+            "name": "Auth"
+        },
+        {
+            "_id": "req_register",
+            "_type": "request",
+            "parentId": "fld_auth",
+            "name": "Register",
+            "method": "POST",
+            "url": "{{ baseUrl }}/api/auth/register",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n  \"name\": \"Demo\",\n  \"email\": \"demo@example.com\",\n  \"password\": \"secret123\"\n}"
+            }
+        },
+        {
+            "_id": "req_login",
+            "_type": "request",
+            "parentId": "fld_auth",
+            "name": "Login",
+            "method": "POST",
+            "url": "{{ baseUrl }}/api/auth/login",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n  \"email\": \"demo@example.com\",\n  \"password\": \"secret123\"\n}"
+            }
+        },
+        {
+            "_id": "fld_accounts",
+            "_type": "request_group",
+            "parentId": "wrk_money_api",
+            "name": "Accounts"
+        },
+        {
+            "_id": "req_accounts_create",
+            "_type": "request",
+            "parentId": "fld_accounts",
+            "name": "Create Account",
+            "method": "POST",
+            "url": "{{ baseUrl }}/api/accounts",
+            "headers": [
+                { "name": "Authorization", "value": "Bearer {{ token }}" }
+            ],
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n  \"name\": \"Banco\",\n  \"type\": \"corrente\",\n  \"opening_balance\": 0\n}"
+            }
+        },
+        {
+            "_id": "req_accounts_list",
+            "_type": "request",
+            "parentId": "fld_accounts",
+            "name": "List Accounts",
+            "method": "GET",
+            "url": "{{ baseUrl }}/api/accounts",
+            "headers": [
+                { "name": "Authorization", "value": "Bearer {{ token }}" }
+            ]
+        },
+        {
+            "_id": "fld_transactions",
+            "_type": "request_group",
+            "parentId": "wrk_money_api",
+            "name": "Transactions"
+        },
+        {
+            "_id": "req_tx_income",
+            "_type": "request",
+            "parentId": "fld_transactions",
+            "name": "Create Income",
+            "method": "POST",
+            "url": "{{ baseUrl }}/api/transactions",
+            "headers": [
+                { "name": "Authorization", "value": "Bearer {{ token }}" }
+            ],
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n  \"transaction_type\": \"income\",\n  \"value\": 100,\n  \"date\": \"2025-08-20\",\n  \"account_id\": 1\n}"
+            }
+        },
+        {
+            "_id": "req_tx_expense",
+            "_type": "request",
+            "parentId": "fld_transactions",
+            "name": "Create Expense",
+            "method": "POST",
+            "url": "{{ baseUrl }}/api/transactions",
+            "headers": [
+                { "name": "Authorization", "value": "Bearer {{ token }}" }
+            ],
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n  \"transaction_type\": \"expense\",\n  \"value\": 50,\n  \"date\": \"2025-08-20\",\n  \"account_id\": 1\n}"
+            }
+        },
+        {
+            "_id": "req_tx_transfer",
+            "_type": "request",
+            "parentId": "fld_transactions",
+            "name": "Create Transfer",
+            "method": "POST",
+            "url": "{{ baseUrl }}/api/transactions",
+            "headers": [
+                { "name": "Authorization", "value": "Bearer {{ token }}" }
+            ],
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n  \"transaction_type\": \"transfer\",\n  \"value\": 25,\n  \"date\": \"2025-08-20\",\n  \"account_id\": 1,\n  \"account_out_id\": 2\n}"
+            }
+        }
+    ]
+}

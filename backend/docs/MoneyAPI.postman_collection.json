@@ -1,0 +1,152 @@
+{
+    "info": {
+        "name": "Money API (Laravel JWT)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Register",
+            "request": {
+                "method": "POST",
+                "header": [
+                    { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/auth/register",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "auth", "register"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"Demo\",\n  \"email\": \"demo@example.com\",\n  \"password\": \"secret123\"\n}"
+                }
+            }
+        },
+        {
+            "name": "Login",
+            "request": {
+                "method": "POST",
+                "header": [
+                    { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/auth/login",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "auth", "login"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"email\": \"demo@example.com\",\n  \"password\": \"secret123\"\n}"
+                }
+            }
+        },
+        {
+            "name": "Me",
+            "request": {
+                "method": "GET",
+                "header": [
+                    { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/users/me",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "users", "me"]
+                }
+            }
+        },
+        {
+            "name": "Create Account",
+            "request": {
+                "method": "POST",
+                "header": [
+                    { "key": "Authorization", "value": "Bearer {{token}}" },
+                    { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/accounts",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "accounts"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"Banco\",\n  \"type\": \"corrente\",\n  \"opening_balance\": 0\n}"
+                }
+            }
+        },
+        {
+            "name": "List Accounts",
+            "request": {
+                "method": "GET",
+                "header": [
+                    { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/accounts",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "accounts"]
+                }
+            }
+        },
+        {
+            "name": "Create Income",
+            "request": {
+                "method": "POST",
+                "header": [
+                    { "key": "Authorization", "value": "Bearer {{token}}" },
+                    { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/transactions",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "transactions"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"transaction_type\": \"income\",\n  \"value\": 100,\n  \"date\": \"2025-08-20\",\n  \"account_id\": 1\n}"
+                }
+            }
+        },
+        {
+            "name": "Create Expense",
+            "request": {
+                "method": "POST",
+                "header": [
+                    { "key": "Authorization", "value": "Bearer {{token}}" },
+                    { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/transactions",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "transactions"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"transaction_type\": \"expense\",\n  \"value\": 50,\n  \"date\": \"2025-08-20\",\n  \"account_id\": 1\n}"
+                }
+            }
+        },
+        {
+            "name": "Create Transfer",
+            "request": {
+                "method": "POST",
+                "header": [
+                    { "key": "Authorization", "value": "Bearer {{token}}" },
+                    { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/transactions",
+                    "host": ["{{baseUrl}}"],
+                    "path": ["api", "transactions"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"transaction_type\": \"transfer\",\n  \"value\": 25,\n  \"date\": \"2025-08-20\",\n  \"account_id\": 1,\n  \"account_out_id\": 2\n}"
+                }
+            }
+        }
+    ],
+    "variable": [
+        { "key": "baseUrl", "value": "http://localhost:8000" },
+        { "key": "token", "value": "" }
+    ]
+}
