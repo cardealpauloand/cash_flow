@@ -2,43 +2,68 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SubCategoryManager, { SubCategory } from "./SubCategoryManager";
 import InstallmentManager, { Installment } from "./InstallmentManager";
+import { useReferenceData } from "@/contexts/ReferenceDataContext";
+import { useAccounts } from "@/hooks/useAccounts";
+
+interface TransactionFormSubmitPayload {
+  id?: string;
+  type: string;
+  description: string;
+  amount: number;
+  category?: string;
+  account: string;
+  date: string;
+  tags?: string[];
+  subCategories?: SubCategory[];
+  installments?: Installment[];
+}
 
 interface TransactionFormProps {
-  onSubmit: (transaction: any) => void;
+  onSubmit: (transaction: TransactionFormSubmitPayload) => void;
   onCancel: () => void;
-  initialData?: {
-    id?: string;
-    type: string;
-    description: string;
-    amount: number;
-    category?: string;
-    account: string;
-    date: string;
-    tags?: string[];
-    subCategories?: SubCategory[];
-    installments?: Installment[];
-  };
+  initialData?: TransactionFormSubmitPayload;
   isEditing?: boolean;
 }
 
-const TransactionForm = ({ onSubmit, onCancel, initialData, isEditing = false }: TransactionFormProps) => {
-  const [date, setDate] = useState<Date>(initialData?.date ? new Date(initialData.date) : new Date());
+const TransactionForm = ({
+  onSubmit,
+  onCancel,
+  initialData,
+  isEditing = false,
+}: TransactionFormProps) => {
+  const [date, setDate] = useState<Date>(
+    initialData?.date ? new Date(initialData.date) : new Date()
+  );
   const [tags, setTags] = useState<string[]>(initialData?.tags || []);
   const [newTag, setNewTag] = useState("");
-  const [subCategories, setSubCategories] = useState<SubCategory[]>(initialData?.subCategories || []);
-  const [installments, setInstallments] = useState<Installment[]>(initialData?.installments || []);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>(
+    initialData?.subCategories || []
+  );
+  const [installments, setInstallments] = useState<Installment[]>(
+    initialData?.installments || []
+  );
   const [formData, setFormData] = useState({
     type: initialData?.type || "",
     description: initialData?.description || "",
@@ -46,6 +71,9 @@ const TransactionForm = ({ onSubmit, onCancel, initialData, isEditing = false }:
     category: initialData?.category || "",
     account: initialData?.account || "",
   });
+
+  const ref = useReferenceData();
+  const accounts = useAccounts();
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -55,22 +83,25 @@ const TransactionForm = ({ onSubmit, onCancel, initialData, isEditing = false }:
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Determinar o valor final baseado na prioridade: parcelas > subcategorias > valor direto
     let finalAmount: number;
     if (installments.length > 0) {
-      finalAmount = installments.reduce((sum, installment) => sum + installment.amount, 0);
+      finalAmount = installments.reduce(
+        (sum, installment) => sum + installment.amount,
+        0
+      );
     } else if (subCategories.length > 0) {
       finalAmount = subCategories.reduce((sum, sub) => sum + sub.value, 0);
     } else {
       finalAmount = parseFloat(formData.amount);
     }
-    
+
     const transaction = {
       ...(initialData?.id && { id: initialData.id }),
       ...formData,
@@ -80,25 +111,31 @@ const TransactionForm = ({ onSubmit, onCancel, initialData, isEditing = false }:
       subCategories: subCategories.length > 0 ? subCategories : undefined,
       installments: installments.length > 0 ? installments : undefined,
     };
-    
+
     onSubmit(transaction);
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
     <Card className="shadow-card">
       <CardHeader>
-        <CardTitle>{isEditing ? "Editar Transação" : "Nova Transação"}</CardTitle>
+        <CardTitle>
+          {isEditing ? "Editar Transação" : "Nova Transação"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Tipo *</Label>
-              <Select onValueChange={(value) => handleInputChange("type", value)} value={formData.type} required>
+              <Select
+                onValueChange={(value) => handleInputChange("type", value)}
+                value={formData.type}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
@@ -138,36 +175,39 @@ const TransactionForm = ({ onSubmit, onCancel, initialData, isEditing = false }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Categoria</Label>
-              <Select onValueChange={(value) => handleInputChange("category", value)} value={formData.category}>
+              <Select
+                onValueChange={(value) => handleInputChange("category", value)}
+                value={formData.category}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="salario">Salário</SelectItem>
-                  <SelectItem value="freelance">Freelance</SelectItem>
-                  <SelectItem value="investimentos">Investimentos</SelectItem>
-                  <SelectItem value="alimentacao">Alimentação</SelectItem>
-                  <SelectItem value="transporte">Transporte</SelectItem>
-                  <SelectItem value="entretenimento">Entretenimento</SelectItem>
-                  <SelectItem value="saude">Saúde</SelectItem>
-                  <SelectItem value="educacao">Educação</SelectItem>
-                  <SelectItem value="casa">Casa</SelectItem>
-                  <SelectItem value="outros">Outros</SelectItem>
+                  {ref.categories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="account">Conta *</Label>
-              <Select onValueChange={(value) => handleInputChange("account", value)} value={formData.account} required>
+              <Select
+                onValueChange={(value) => handleInputChange("account", value)}
+                value={formData.account}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="conta-corrente">Conta Corrente</SelectItem>
-                  <SelectItem value="poupanca">Poupança</SelectItem>
-                  <SelectItem value="cartao-credito">Cartão de Crédito</SelectItem>
-                  <SelectItem value="carteira">Carteira</SelectItem>
+                  {accounts.list.data?.map((acc) => (
+                    <SelectItem key={acc.id} value={String(acc.id)}>
+                      {acc.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -185,7 +225,9 @@ const TransactionForm = ({ onSubmit, onCancel, initialData, isEditing = false }:
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP", { locale: ptBR }) : "Selecione a data"}
+                  {date
+                    ? format(date, "PPP", { locale: ptBR })
+                    : "Selecione a data"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -207,16 +249,27 @@ const TransactionForm = ({ onSubmit, onCancel, initialData, isEditing = false }:
                 placeholder="Adicionar tag"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
+                onKeyPress={(e) =>
+                  e.key === "Enter" && (e.preventDefault(), handleAddTag())
+                }
               />
-              <Button type="button" onClick={handleAddTag} size="icon" variant="outline">
+              <Button
+                type="button"
+                onClick={handleAddTag}
+                size="icon"
+                variant="outline"
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="flex items-center space-x-1"
+                  >
                     <span>{tag}</span>
                     <button
                       type="button"
@@ -249,7 +302,12 @@ const TransactionForm = ({ onSubmit, onCancel, initialData, isEditing = false }:
             <Button type="submit" className="flex-1">
               {isEditing ? "Salvar Alterações" : "Salvar Transação"}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="flex-1"
+            >
               Cancelar
             </Button>
           </div>

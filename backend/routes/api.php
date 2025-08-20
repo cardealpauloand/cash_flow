@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\{AuthController, UserController, AccountController, TransactionController};
+use App\Http\Controllers\{AuthController, UserController, AccountController, TransactionController, CategoryController, SubCategoryController, TagController};
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
@@ -15,4 +15,7 @@ Route::middleware('auth:api')->group(function () {
 
     Route::apiResource('accounts', AccountController::class);
     Route::apiResource('transactions', TransactionController::class)->only(['index','store','show','destroy']);
+    Route::get('categories', [CategoryController::class,'index']);
+    Route::get('sub-categories', [SubCategoryController::class,'index']);
+    Route::get('tags', [TagController::class,'index']);
 });

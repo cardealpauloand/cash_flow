@@ -161,6 +161,17 @@ export const api = {
       });
     },
   },
+  misc: {
+    categories() {
+      return request<Array<{ id: number; name: string }>>("/categories");
+    },
+    subCategories() {
+      return request<Array<{ id: number; name: string }>>("/sub-categories");
+    },
+    tags() {
+      return request<Array<{ id: number; name: string }>>("/tags");
+    },
+  },
 };
 
 export { request };
