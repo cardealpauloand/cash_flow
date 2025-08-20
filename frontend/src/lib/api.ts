@@ -72,13 +72,24 @@ export interface Paginated<T> {
   current_page: number;
   last_page: number;
 }
-export interface TransactionListItem {
+// Agora a listagem baseia-se em parcelas (installments)
+export interface InstallmentListItem {
   id: number;
   value: number;
-  date: string;
+  transaction_type_id: number; // tipo da parcela
   account_id: number;
-  transaction_type_id: number;
+  transaction_id: number;
+  date: string; // data da transação raiz
+  root_transaction_type_id: number;
   account_out_id?: number | null;
+  root_account_id?: number | null;
+  subs: Array<{ id: number; value: number }>;
+  tags: Array<{ id: number }>;
+}
+export interface TransactionCreateResponse {
+  transaction_id: number;
+  date: string;
+  installments: InstallmentListItem[];
 }
 export interface TransactionCreatePayload {
   transaction_type: "income" | "expense" | "transfer";
@@ -147,10 +158,10 @@ export const api = {
             ) as [string, string][]
           )}`
         : "";
-      return request<Paginated<TransactionListItem>>(`/transactions${query}`);
+      return request<Paginated<InstallmentListItem>>(`/transactions${query}`);
     },
     create(data: TransactionCreatePayload) {
-      return request<TransactionListItem, TransactionCreatePayload>(
+      return request<TransactionCreateResponse, TransactionCreatePayload>(
         `/transactions`,
         { method: "POST", body: data }
       );

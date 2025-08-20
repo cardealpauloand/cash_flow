@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   api,
   TransactionCreatePayload,
-  TransactionListItem,
   Paginated,
+  InstallmentListItem,
 } from "@/lib/api";
 
 export interface TransactionsFilters {
@@ -18,7 +18,7 @@ const TX_KEY = (filters: TransactionsFilters) => ["transactions", filters];
 
 export function useTransactions(filters: TransactionsFilters) {
   const qc = useQueryClient();
-  const list = useQuery<Paginated<TransactionListItem>>({
+  const list = useQuery<Paginated<InstallmentListItem>>({
     queryKey: TX_KEY(filters),
     queryFn: () =>
       api.transactions.list(

@@ -45,7 +45,7 @@ import { useState } from "react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useToast } from "@/hooks/use-toast";
-import { TransactionListItem } from "@/lib/api";
+import { InstallmentListItem } from "@/lib/api";
 
 const transactionIcons = {
   income: { icon: ArrowUpRight, color: "text-income" },
@@ -69,8 +69,8 @@ function mapType(id: number): "income" | "expense" | "transfer" {
 const TransactionsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingTx, setEditingTx] = useState<TransactionListItem | null>(null);
-  const [deletingTx, setDeletingTx] = useState<TransactionListItem | null>(
+  const [editingTx, setEditingTx] = useState<InstallmentListItem | null>(null);
+  const [deletingTx, setDeletingTx] = useState<InstallmentListItem | null>(
     null
   );
 
@@ -86,13 +86,13 @@ const TransactionsPage = () => {
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("pt-BR");
 
-  const transactions = tx.list.data?.data || [];
-  const incomeTotal = transactions
-    .filter((t) => mapType(t.transaction_type_id) === "income")
-    .reduce((s, t) => s + t.value, 0);
-  const expenseTotal = transactions
-    .filter((t) => mapType(t.transaction_type_id) === "expense")
-    .reduce((s, t) => s + t.value, 0);
+  const installments = tx.list.data?.data || [];
+  const incomeTotal = installments
+    .filter((i) => mapType(i.transaction_type_id) === "income")
+    .reduce((s, i) => s + i.value, 0);
+  const expenseTotal = installments
+    .filter((i) => mapType(i.transaction_type_id) === "expense")
+    .reduce((s, i) => s + i.value, 0);
 
   interface NewTransactionForm {
     type: "income" | "expense" | "transfer";
@@ -104,15 +104,26 @@ const TransactionsPage = () => {
     description?: string;
   }
 
-  const handleNewTransaction = async (form: NewTransactionForm) => {
+  interface FormSubmitPayload {
+    type: string;
+    amount: number | string;
+    date?: string;
+    account_id?: number;
+    account?: number | string;
+    account_out_id?: number | string;
+    description?: string;
+  }
+  const handleNewTransaction = async (form: FormSubmitPayload) => {
+    // form.type vem como string genérica do TransactionForm, garantir narrow
+    const type = form.type as string as "income" | "expense" | "transfer";
     try {
       await tx.create.mutateAsync({
-        transaction_type: form.type,
+        transaction_type: type,
         value: Number(form.amount),
         date: form.date || new Date().toISOString().slice(0, 10),
         account_id: Number(form.account_id || form.account),
         account_out_id:
-          form.type === "transfer" ? Number(form.account_out_id) : undefined,
+          type === "transfer" ? Number(form.account_out_id) : undefined,
         notes: form.description,
       });
       toast({ title: "Transação criada" });
@@ -127,8 +138,8 @@ const TransactionsPage = () => {
     }
   };
 
-  const handleEditTransaction = (transaction: TransactionListItem) => {
-    setEditingTx(transaction);
+  const handleEditTransaction = (installment: InstallmentListItem) => {
+    setEditingTx(installment);
     setIsEditModalOpen(true);
   };
 
@@ -138,7 +149,7 @@ const TransactionsPage = () => {
     setEditingTx(null);
   };
 
-  const handleDeleteTransaction = async (transaction: TransactionListItem) => {
+  const handleDeleteTransaction = async (transaction: InstallmentListItem) => {
     try {
       await tx.remove.mutateAsync(transaction.id);
       toast({ title: "Transação removida" });
@@ -276,16 +287,16 @@ const TransactionsPage = () => {
         {/* Transactions List */}
         <Card className="shadow-card hover:shadow-hover transition-all duration-300">
           <CardHeader>
-            <CardTitle>{transactions.length} transações encontradas</CardTitle>
+            <CardTitle>{installments.length} parcelas encontradas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {transactions.map((transaction) => {
-                const logicalType = mapType(transaction.transaction_type_id);
+              {installments.map((inst) => {
+                const logicalType = mapType(inst.transaction_type_id);
                 const { icon: Icon, color } = transactionIcons[logicalType];
                 return (
                   <div
-                    key={transaction.id}
+                    key={inst.id}
                     className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all duration-200 animate-fade-in group"
                   >
                     <div className="flex items-center space-x-4">
@@ -299,16 +310,16 @@ const TransactionsPage = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-lg">
-                          Transação #{transaction.id}
+                          Parcela #{inst.id}
                         </p>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                           <span>
                             {accounts.list.data?.find(
-                              (a) => a.id === transaction.account_id
+                              (a) => a.id === inst.account_id
                             )?.name || "Conta"}
                           </span>
                           <span>•</span>
-                          <span>{formatDate(transaction.date)}</span>
+                          <span>{formatDate(inst.date)}</span>
                         </div>
                       </div>
                     </div>
@@ -329,7 +340,7 @@ const TransactionsPage = () => {
                             : logicalType === "expense"
                             ? "-"
                             : ""}
-                          {formatCurrency(transaction.value)}
+                          {formatCurrency(inst.value)}
                         </p>
                         <Badge variant="outline" className="text-xs mt-1">
                           {t(transactionLabels[logicalType])}
@@ -347,14 +358,14 @@ const TransactionsPage = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
                           <DropdownMenuItem
-                            onClick={() => handleEditTransaction(transaction)}
+                            onClick={() => handleEditTransaction(inst)}
                             className="cursor-pointer hover:bg-primary/10"
                           >
                             <Edit className="w-4 h-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => setDeletingTx(transaction)}
+                            onClick={() => setDeletingTx(inst)}
                             className="cursor-pointer hover:bg-destructive/10 text-destructive focus:text-destructive"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
@@ -403,8 +414,8 @@ const TransactionsPage = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja excluir a transação #{deletingTx?.id}?
-                Esta ação não pode ser desfeita.
+                Tem certeza que deseja excluir a parcela #{deletingTx?.id}? Esta
+                ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
