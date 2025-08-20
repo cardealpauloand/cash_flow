@@ -1,7 +1,15 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+} from "react";
+import { api, AuthResponse, ApiUser } from "@/lib/api";
 
 export interface User {
-  id: string;
+  id: string; // keep string for UI simplicity
   name: string;
   email: string;
   avatar?: string;
@@ -22,65 +30,87 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const USER_KEY = "cashflow-user";
+const TOKEN_KEY = "cashflow-token";
+
+function mapUser(u: ApiUser): User {
+  return { id: String(u.id), name: u.name, email: u.email };
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  return context;
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Bootstrap auth state
   useEffect(() => {
-    // Simular verificação de autenticação ao inicializar
-    const savedUser = localStorage.getItem('cashflow-user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const storedUser = localStorage.getItem(USER_KEY);
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (storedUser && token) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        /* ignore */
+      }
     }
-    setIsLoading(false);
+    // Try refresh user from API if token exists
+    (async () => {
+      if (token) {
+        try {
+          const me = await api.me();
+          const mapped = mapUser(me);
+          setUser(mapped);
+          localStorage.setItem(USER_KEY, JSON.stringify(mapped));
+        } catch {
+          // token invalid
+          api.setToken(null);
+          localStorage.removeItem(USER_KEY);
+        }
+      }
+      setIsLoading(false);
+    })();
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const persistAuth = (res: AuthResponse) => {
+    api.setToken(res.token);
+    const mapped = mapUser(res.user);
+    setUser(mapped);
+    localStorage.setItem(USER_KEY, JSON.stringify(mapped));
+  };
+
+  const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
-    
-    // Simular chamada de API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simular validação de credenciais
-    if (email === 'admin@cashflow.com' && password === '123456') {
-      const userData: User = {
-        id: '1',
-        name: 'Administrador',
-        email: email,
-        avatar: undefined
-      };
-      
-      setUser(userData);
-      localStorage.setItem('cashflow-user', JSON.stringify(userData));
-    } else {
-      throw new Error('Credenciais inválidas');
+    try {
+      const res = await api.login(email, password);
+      persistAuth(res);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
-  };
+  }, []);
 
-  const register = async (name: string, email: string, password: string): Promise<void> => {
-    setIsLoading(true);
-    
-    // Simular chamada de API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const userData: User = {
-      id: Date.now().toString(),
-      name: name,
-      email: email,
-      avatar: undefined
-    };
-    
-    setUser(userData);
-    localStorage.setItem('cashflow-user', JSON.stringify(userData));
-    setIsLoading(false);
-  };
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      setIsLoading(true);
+      try {
+        const res = await api.register(name, email, password);
+        persistAuth(res);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
-  const logout = () => {
+  const logout = useCallback(() => {
+    api.setToken(null);
     setUser(null);
-    localStorage.removeItem('cashflow-user');
-  };
+    localStorage.removeItem(USER_KEY);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -96,12 +126,4 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

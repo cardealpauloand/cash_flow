@@ -1,0 +1,166 @@
+// Simple API client using fetch with JWT token from localStorage
+export interface ApiOptions<B = unknown> {
+  method?: string;
+  body?: B;
+  headers?: Record<string, string>;
+  auth?: boolean; // include Authorization header
+}
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+
+function getToken() {
+  return localStorage.getItem("cashflow-token");
+}
+
+async function request<T = unknown, B = unknown>(
+  path: string,
+  options: ApiOptions<B> = {}
+): Promise<T> {
+  const { method = "GET", body, headers = {}, auth = true } = options;
+  const finalHeaders: Record<string, string> = {
+    Accept: "application/json",
+  };
+  if (body && !(body instanceof FormData)) {
+    finalHeaders["Content-Type"] = "application/json";
+  }
+  Object.assign(finalHeaders, headers);
+  if (auth && getToken()) {
+    finalHeaders["Authorization"] = `Bearer ${getToken()}`;
+  }
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: finalHeaders,
+    body: body
+      ? body instanceof FormData
+        ? body
+        : JSON.stringify(body)
+      : undefined,
+  });
+  if (res.status === 204) return undefined as T;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    // Try to extract standardized message field
+    const message =
+      (data && (data.message || data.error)) || `Erro ${res.status}`;
+    throw new Error(message);
+  }
+  return data as T;
+}
+
+// Domain types
+export interface ApiUser {
+  id: number;
+  name: string;
+  email: string;
+}
+export interface AuthResponse {
+  token: string;
+  user: ApiUser;
+}
+export interface AccountPayload {
+  name: string;
+  type: "corrente" | "poupanca" | "carteira" | "cartao";
+  opening_balance?: number;
+}
+export interface AccountResponse extends AccountPayload {
+  id: number;
+  user_id: number;
+  created_at?: string;
+}
+export interface Paginated<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+}
+export interface TransactionListItem {
+  id: number;
+  value: number;
+  date: string;
+  account_id: number;
+  transaction_type_id: number;
+  account_out_id?: number | null;
+}
+export interface TransactionCreatePayload {
+  transaction_type: "income" | "expense" | "transfer";
+  value: number;
+  date: string;
+  account_id: number;
+  account_out_id?: number;
+  notes?: string;
+  category_id?: number;
+  sub_category_id?: number;
+  tags?: number[];
+}
+
+export const api = {
+  setToken(token: string | null) {
+    if (token) localStorage.setItem("cashflow-token", token);
+    else localStorage.removeItem("cashflow-token");
+  },
+  login(email: string, password: string) {
+    return request<AuthResponse, { email: string; password: string }>(
+      `/auth/login`,
+      { method: "POST", body: { email, password }, auth: false }
+    );
+  },
+  register(name: string, email: string, password: string) {
+    return request<
+      AuthResponse,
+      { name: string; email: string; password: string }
+    >(`/auth/register`, {
+      method: "POST",
+      body: { name, email, password },
+      auth: false,
+    });
+  },
+  me() {
+    return request<ApiUser>(`/users/me`);
+  },
+  accounts: {
+    list() {
+      return request<AccountResponse[]>(`/accounts`);
+    },
+    create(data: AccountPayload) {
+      return request<AccountResponse, AccountPayload>(`/accounts`, {
+        method: "POST",
+        body: data,
+      });
+    },
+    update(id: number, data: Partial<AccountPayload>) {
+      return request<AccountResponse, Partial<AccountPayload>>(
+        `/accounts/${id}`,
+        { method: "PUT", body: data }
+      );
+    },
+    delete(id: number) {
+      return request<{ deleted: boolean }>(`/accounts/${id}`, {
+        method: "DELETE",
+      });
+    },
+  },
+  transactions: {
+    list(params?: Record<string, string | number | undefined>) {
+      const query = params
+        ? `?${new URLSearchParams(
+            Object.entries(params).filter(
+              ([_, v]) => v !== undefined && v !== null && v !== ""
+            ) as [string, string][]
+          )}`
+        : "";
+      return request<Paginated<TransactionListItem>>(`/transactions${query}`);
+    },
+    create(data: TransactionCreatePayload) {
+      return request<TransactionListItem, TransactionCreatePayload>(
+        `/transactions`,
+        { method: "POST", body: data }
+      );
+    },
+    delete(id: number) {
+      return request<{ deleted: boolean }>(`/transactions/${id}`, {
+        method: "DELETE",
+      });
+    },
+  },
+};
+
+export { request };

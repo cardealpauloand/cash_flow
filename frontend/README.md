@@ -71,3 +71,18 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+# Frontend
+
+## Configuração da Integração com Backend Laravel
+
+1. Copie `.env.example` para `.env` e ajuste a URL da API caso necessário:
+
+```
+VITE_API_URL=http://localhost:8000/api
+```
+
+2. Inicie o backend (Laravel) escutando em `localhost:8000`.
+3. Rode `npm run dev` (ou bun) para iniciar o frontend.
+4. Registro e login agora usam a API real (`/auth/register` e `/auth/login`) e o token JWT é salvo em `localStorage` (`cashflow-token`).
+5. Para adicionar consumo de contas e transações substitua mocks usando `api.accounts` e `api.transactions` (ver `src/lib/api.ts`).
