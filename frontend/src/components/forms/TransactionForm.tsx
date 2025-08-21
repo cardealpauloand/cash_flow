@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,8 +26,9 @@ import SubCategoryManager, { SubCategory } from "./SubCategoryManager";
 import InstallmentManager, { Installment } from "./InstallmentManager";
 import { useReferenceData } from "@/contexts/ReferenceDataContext";
 import { useAccounts } from "@/hooks/useAccounts";
+import { api } from "@/lib/api";
 
-interface TransactionFormSubmitPayload {
+export interface TransactionFormSubmitPayload {
   id?: string;
   type: string;
   description: string;
@@ -38,6 +39,24 @@ interface TransactionFormSubmitPayload {
   tags?: string[];
   subCategories?: SubCategory[];
   installments?: Installment[];
+}
+
+// Payload real esperado pelo backend (simplificado)
+interface BackendPayload {
+  transaction_type: "income" | "expense" | "transfer";
+  value: number;
+  date: string;
+  account_id: number;
+  account_out_id?: number;
+  notes?: string;
+  category_id?: number;
+  sub_category_id?: number;
+  tags?: number[];
+  subs?: Array<{
+    value: number;
+    category_id?: number;
+    sub_category_id?: number;
+  }>;
 }
 
 interface TransactionFormProps {
@@ -75,6 +94,10 @@ const TransactionForm = ({
   const ref = useReferenceData();
   const accounts = useAccounts();
 
+  useEffect(() => {
+    console.log("Initial data loaded:", ref);
+  }, [ref]);
+
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
       setTags([...tags, newTag.trim()]);
@@ -102,6 +125,7 @@ const TransactionForm = ({
       finalAmount = parseFloat(formData.amount);
     }
 
+    // Montagem do payload interno (mantém compatibilidade com onSubmit atual)
     const transaction = {
       ...(initialData?.id && { id: initialData.id }),
       ...formData,
@@ -112,7 +136,7 @@ const TransactionForm = ({
       installments: installments.length > 0 ? installments : undefined,
     };
 
-    onSubmit(transaction);
+    onSubmit(transaction); // mantém fluxo atual
   };
 
   const handleInputChange = (field: string, value: string) => {

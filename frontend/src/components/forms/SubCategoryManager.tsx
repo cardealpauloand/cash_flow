@@ -2,17 +2,24 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, X, Calculator } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
+import { useReferenceData } from "@/contexts/ReferenceDataContext";
 
 export interface SubCategory {
-  id: string;
+  id: string; // internal UI id
   value: number;
-  category: string;
-  subCategory: string;
+  categoryId?: number; // id real da categoria
+  subCategoryId?: number; // id real da subcategoria
 }
 
 interface SubCategoryManagerProps {
@@ -21,57 +28,43 @@ interface SubCategoryManagerProps {
   totalValue: number;
 }
 
-const SubCategoryManager = ({ subCategories, onSubCategoriesChange, totalValue }: SubCategoryManagerProps) => {
+const SubCategoryManager = ({
+  subCategories,
+  onSubCategoriesChange,
+  totalValue,
+}: SubCategoryManagerProps) => {
   const { formatCurrency } = useApp();
-  const [newSubCategory, setNewSubCategory] = useState({
-    value: "",
-    category: "",
-    subCategory: ""
-  });
-
-  const categories = [
-    "Lazer",
-    "Alimentação",
-    "Transporte",
-    "Saúde",
-    "Educação",
-    "Casa",
-    "Trabalho",
-    "Suplementação",
-    "Outros"
-  ];
-
-  const subCategoryOptions: Record<string, string[]> = {
-    "Lazer": ["Cinema", "Restaurante", "Jogos", "Viagem", "Comida", "Bebidas"],
-    "Alimentação": ["Supermercado", "Delivery", "Lanche", "Café", "Mercado"],
-    "Transporte": ["Gasolina", "Uber", "Ônibus", "Taxi", "Estacionamento"],
-    "Saúde": ["Farmácia", "Médico", "Exames", "Dentista", "Academia"],
-    "Educação": ["Cursos", "Livros", "Material", "Mensalidade"],
-    "Casa": ["Aluguel", "Condomínio", "Luz", "Água", "Internet", "Limpeza"],
-    "Trabalho": ["Material", "Transporte", "Almoço", "Café"],
-    "Suplementação": ["Whey", "Creatina", "Vitaminas", "BCAA", "Glutamina"],
-    "Outros": ["Diversos", "Emergência", "Presente"]
-  };
+  const ref = useReferenceData();
+  const [newSubCategory, setNewSubCategory] = useState<{
+    value: string;
+    categoryId?: string;
+    subCategoryId?: string;
+  }>({ value: "" });
 
   const handleAddSubCategory = () => {
-    if (newSubCategory.value && newSubCategory.category && newSubCategory.subCategory) {
-      const subCategory: SubCategory = {
-        id: Date.now().toString(),
-        value: parseFloat(newSubCategory.value),
-        category: newSubCategory.category,
-        subCategory: newSubCategory.subCategory
-      };
-      
-      onSubCategoriesChange([...subCategories, subCategory]);
-      setNewSubCategory({ value: "", category: "", subCategory: "" });
-    }
+    if (!newSubCategory.value) return;
+    const sub: SubCategory = {
+      id: Date.now().toString(),
+      value: parseFloat(newSubCategory.value),
+      categoryId: newSubCategory.categoryId
+        ? Number(newSubCategory.categoryId)
+        : undefined,
+      subCategoryId: newSubCategory.subCategoryId
+        ? Number(newSubCategory.subCategoryId)
+        : undefined,
+    };
+    onSubCategoriesChange([...subCategories, sub]);
+    setNewSubCategory({ value: "" });
   };
 
   const handleRemoveSubCategory = (id: string) => {
-    onSubCategoriesChange(subCategories.filter(sub => sub.id !== id));
+    onSubCategoriesChange(subCategories.filter((sub) => sub.id !== id));
   };
 
-  const calculatedTotal = subCategories.reduce((sum, sub) => sum + sub.value, 0);
+  const calculatedTotal = subCategories.reduce(
+    (sum, sub) => sum + sub.value,
+    0
+  );
 
   return (
     <Card className="shadow-sm">
@@ -92,24 +85,34 @@ const SubCategoryManager = ({ subCategories, onSubCategoriesChange, totalValue }
               step="0.01"
               placeholder="0,00"
               value={newSubCategory.value}
-              onChange={(e) => setNewSubCategory(prev => ({ ...prev, value: e.target.value }))}
+              onChange={(e) =>
+                setNewSubCategory((prev) => ({
+                  ...prev,
+                  value: e.target.value,
+                }))
+              }
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoria</Label>
-            <Select 
-              onValueChange={(value) => {
-                setNewSubCategory(prev => ({ ...prev, category: value, subCategory: "" }));
-              }} 
-              value={newSubCategory.category}
+            <Select
+              onValueChange={(value) =>
+                setNewSubCategory((prev) => ({
+                  ...prev,
+                  categoryId: value || undefined,
+                }))
+              }
+              value={newSubCategory.categoryId}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                {ref.categories.map((cat) => (
+                  <SelectItem key={cat.id} value={String(cat.id)}>
+                    {cat.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -117,17 +120,24 @@ const SubCategoryManager = ({ subCategories, onSubCategoriesChange, totalValue }
 
           <div className="space-y-2">
             <Label htmlFor="subCategory">Subcategoria</Label>
-            <Select 
-              onValueChange={(value) => setNewSubCategory(prev => ({ ...prev, subCategory: value }))} 
-              value={newSubCategory.subCategory}
-              disabled={!newSubCategory.category}
+            <Select
+              onValueChange={(value) =>
+                setNewSubCategory((prev) => ({
+                  ...prev,
+                  subCategoryId: value || undefined,
+                }))
+              }
+              value={newSubCategory.subCategoryId}
+              disabled={false}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {newSubCategory.category && subCategoryOptions[newSubCategory.category]?.map((subCat) => (
-                  <SelectItem key={subCat} value={subCat}>{subCat}</SelectItem>
+                {ref.subCategories.map((sc) => (
+                  <SelectItem key={sc.id} value={String(sc.id)}>
+                    {sc.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -135,11 +145,11 @@ const SubCategoryManager = ({ subCategories, onSubCategoriesChange, totalValue }
 
           <div className="space-y-2">
             <Label>&nbsp;</Label>
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               onClick={handleAddSubCategory}
               className="w-full"
-              disabled={!newSubCategory.value || !newSubCategory.category || !newSubCategory.subCategory}
+              disabled={!newSubCategory.value}
             >
               <Plus className="h-4 w-4 mr-2" />
               Adicionar
@@ -152,10 +162,20 @@ const SubCategoryManager = ({ subCategories, onSubCategoriesChange, totalValue }
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {subCategories.map((sub) => (
-                <Badge key={sub.id} variant="secondary" className="flex items-center gap-2 p-2">
-                  <span className="font-medium">{formatCurrency(sub.value)}</span>
+                <Badge
+                  key={sub.id}
+                  variant="secondary"
+                  className="flex items-center gap-2 p-2"
+                >
+                  <span className="font-medium">
+                    {formatCurrency(sub.value)}
+                  </span>
                   <span className="text-xs">
-                    {sub.category} → {sub.subCategory}
+                    {ref.categories.find((c) => c.id === sub.categoryId)
+                      ?.name || "—"}{" "}
+                    →{" "}
+                    {ref.subCategories.find((s) => s.id === sub.subCategoryId)
+                      ?.name || "—"}
                   </span>
                   <button
                     type="button"
@@ -171,17 +191,22 @@ const SubCategoryManager = ({ subCategories, onSubCategoriesChange, totalValue }
             {/* Total calculado */}
             <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
               <span className="font-medium">Total Calculado:</span>
-              <span className="font-bold text-lg">{formatCurrency(calculatedTotal)}</span>
+              <span className="font-bold text-lg">
+                {formatCurrency(calculatedTotal)}
+              </span>
             </div>
 
             {/* Alerta se valores não batem */}
-            {totalValue > 0 && Math.abs(calculatedTotal - totalValue) > 0.01 && (
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  ⚠️ O valor total ({formatCurrency(totalValue)}) não corresponde à soma das subcategorias ({formatCurrency(calculatedTotal)})
-                </p>
-              </div>
-            )}
+            {totalValue > 0 &&
+              Math.abs(calculatedTotal - totalValue) > 0.01 && (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    ⚠️ O valor total ({formatCurrency(totalValue)}) não
+                    corresponde à soma das subcategorias (
+                    {formatCurrency(calculatedTotal)})
+                  </p>
+                </div>
+              )}
           </div>
         )}
       </CardContent>

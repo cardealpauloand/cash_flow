@@ -10,7 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +48,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useApp } from "@/contexts/AppContext";
 import TransactionForm from "@/components/forms/TransactionForm";
+import { SubCategory as UI_SubCategory } from "@/components/forms/SubCategoryManager";
 import { useState } from "react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -112,11 +120,22 @@ const TransactionsPage = () => {
     account?: number | string;
     account_out_id?: number | string;
     description?: string;
+    category?: string;
+    subCategories?: UI_SubCategory[];
+    tags?: string[];
   }
   const handleNewTransaction = async (form: FormSubmitPayload) => {
     // form.type vem como string genérica do TransactionForm, garantir narrow
     const type = form.type as string as "income" | "expense" | "transfer";
     try {
+      // Construir subs se existirem subCategories (cada item vira um sub)
+      const subs = (form.subCategories || []).map((sc) => ({
+        value: sc.value,
+        category_id: sc.categoryId,
+        sub_category_id: sc.subCategoryId,
+      }));
+      const category_id =
+        !subs.length && form.category ? Number(form.category) : undefined;
       await tx.create.mutateAsync({
         transaction_type: type,
         value: Number(form.amount),
@@ -125,6 +144,8 @@ const TransactionsPage = () => {
         account_out_id:
           type === "transfer" ? Number(form.account_out_id) : undefined,
         notes: form.description,
+        category_id,
+        subs: subs.length ? subs : undefined,
       });
       toast({ title: "Transação criada" });
       setIsModalOpen(false);
@@ -184,6 +205,12 @@ const TransactionsPage = () => {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t("newTransaction")}</DialogTitle>
+                <DialogDescription>
+                  Preencha os dados da nova transação.
+                </DialogDescription>
+              </DialogHeader>
               <TransactionForm
                 onSubmit={handleNewTransaction}
                 onCancel={() => setIsModalOpen(false)}
@@ -384,6 +411,14 @@ const TransactionsPage = () => {
         {/* Edit Transaction Modal (placeholder) */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar transação</DialogTitle>
+              {editingTx && (
+                <DialogDescription>
+                  Editando parcela #{editingTx.id}
+                </DialogDescription>
+              )}
+            </DialogHeader>
             {editingTx && (
               <TransactionForm
                 onSubmit={handleUpdateTransaction}
@@ -398,6 +433,22 @@ const TransactionsPage = () => {
                   amount: editingTx.value,
                   account: String(editingTx.account_id),
                   date: editingTx.date,
+                  // Se houver subs, mapear para UI_SubCategory
+                  subCategories: editingTx.subs?.length
+                    ? editingTx.subs.map((s) => ({
+                        id: String(s.id),
+                        value: s.value,
+                        categoryId: s.category_id ?? undefined,
+                        subCategoryId: s.sub_category_id ?? undefined,
+                      }))
+                    : undefined,
+                  // Categoria simples apenas se não houver múltiplos subs (ou seja, exatamente 1 com category)
+                  category:
+                    editingTx.subs &&
+                    editingTx.subs.length === 1 &&
+                    editingTx.subs[0].category_id
+                      ? String(editingTx.subs[0].category_id)
+                      : undefined,
                 }}
                 isEditing
               />

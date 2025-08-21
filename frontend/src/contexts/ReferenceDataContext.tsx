@@ -6,6 +6,7 @@ import {
   ReactNode,
 } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface ReferenceDataContextValue {
   categories: Array<{ id: number; name: string }>;
@@ -32,26 +33,45 @@ export const ReferenceDataProvider = ({
   >([]);
   const [tags, setTags] = useState<ReferenceDataContextValue["tags"]>([]);
   const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [cats, subs, tgs] = await Promise.all([
+      const [cats, subs] = await Promise.all([
         api.misc.categories(),
         api.misc.subCategories(),
-        api.misc.tags(),
+        // api.misc.tags(),
       ]);
+      console.log("Dados de referência carregados:", {
+        categories: cats,
+        subCategories: subs,
+        // tags: tgs,
+      });
       setCategories(cats);
       setSubCategories(subs);
-      setTags(tgs);
+      // setTags(tgs);
+    } catch (e) {
+      // Ignora erros (ex: 401 antes de autenticar). Será re-tentado quando isAuthenticated mudar.
+      console.warn("Falha ao carregar dados de referência:", e);
     } finally {
       setLoading(false);
     }
   };
 
+  // Carrega dados apenas quando autenticado para evitar 401 antes do login
   useEffect(() => {
-    loadAll();
-  }, []);
+    console.log("isAuthenticated", isAuthenticated);
+
+    if (isAuthenticated) {
+      loadAll();
+    } else {
+      // limpa dados ao deslogar
+      setCategories([]);
+      setSubCategories([]);
+      setTags([]);
+    }
+  }, [isAuthenticated]);
 
   return (
     <ReferenceDataContext.Provider
