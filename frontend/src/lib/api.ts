@@ -113,6 +113,29 @@ export interface TransactionCreatePayload {
     sub_category_id?: number;
   }>;
 }
+export interface DashboardSummary {
+  total_balance: number;
+  monthly_income: number;
+  monthly_expenses: number;
+  net_flow: number;
+  accounts: Array<{
+    id: number;
+    name: string;
+    type: string;
+    balance: number;
+    percentage?: number;
+  }>;
+  recent_transactions: Array<{
+    id: number;
+    type: "income" | "expense" | "transfer";
+    description: string;
+    amount: number;
+    account: string;
+    date: string;
+  }>;
+  date_from: string;
+  date_to: string;
+}
 
 export const api = {
   setToken(token: string | null) {
@@ -181,6 +204,14 @@ export const api = {
       return request<{ deleted: boolean }>(`/transactions/${id}`, {
         method: "DELETE",
       });
+    },
+  },
+  dashboard: {
+    summary(params?: { date_from?: string; date_to?: string }) {
+      const query = params
+        ? `?${new URLSearchParams(params as Record<string, string>)}`
+        : "";
+      return request<DashboardSummary>(`/dashboard/summary${query}`);
     },
   },
   misc: {

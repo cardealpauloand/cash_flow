@@ -30,12 +30,18 @@ export function useTransactions(filters: TransactionsFilters) {
   const create = useMutation({
     mutationFn: (payload: TransactionCreatePayload) =>
       api.transactions.create(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["transactions"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+    },
   });
 
   const remove = useMutation({
     mutationFn: (id: number) => api.transactions.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["transactions"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+    },
   });
 
   return { list, create, remove };
