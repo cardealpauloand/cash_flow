@@ -88,6 +88,9 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+  /* Logo background color (light theme) */
+  --logo-bg: #ffffff; /* ajuste para combinar com o tema claro */
   }
 
   .dark {
@@ -151,6 +154,9 @@
     --shadow-card: 0 4px 6px -1px hsl(220 40% 5% / 0.3), 0 2px 4px -1px hsl(220 40% 5% / 0.2);
     --shadow-hover: 0 10px 15px -3px hsl(220 40% 5% / 0.4), 0 4px 6px -2px hsl(220 40% 5% / 0.3);
     --shadow-glow: 0 0 20px hsl(var(--primary) / 0.4);
+
+  /* Logo background color (dark theme) */
+  --logo-bg: #0b1220;
   }
 }
 
@@ -165,6 +171,10 @@
 }
 
 @layer utilities {
+  /* Force navbar background to logo color */
+  .navbar-bg {
+    background-color: var(--logo-bg) !important;
+  }
   /* Custom animations for Cash Flow */
   .animate-glow-pulse {
     animation: glow-pulse 2s ease-in-out infinite alternate;

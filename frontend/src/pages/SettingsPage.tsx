@@ -6,20 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/ThemeProvider";
 import { useApp, Currency, Language } from "@/contexts/AppContext";
 import { 
   User, 
-  Bell, 
   Shield, 
   Palette, 
-  Globe, 
-  Download, 
-  Upload,
-  Trash2,
   Save,
-  RefreshCw,
   CheckCircle
 } from "lucide-react";
 import { useState } from "react";
@@ -44,17 +37,6 @@ const SettingsPage = () => {
   });
 
   // Estados dos switches
-  const [notifications, setNotifications] = useState({
-    email: true,
-    budget: true,
-    transactions: false
-  });
-
-  const [privacy, setPrivacy] = useState({
-    dataSharing: true,
-    autoBackup: true,
-    dataRetention: "2years"
-  });
 
   const [security, setSecurity] = useState({
     sessionTimeout: true
@@ -146,9 +128,9 @@ const SettingsPage = () => {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Settings */}
-          <Card className="shadow-card lg:col-span-2 hover:shadow-hover transition-all duration-300">
+          <Card className="shadow-card lg:col-span-3 hover:shadow-hover transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <User className="w-5 h-5" />
@@ -202,86 +184,7 @@ const SettingsPage = () => {
               </Button>
             </CardContent>
           </Card>
-
-          {/* Quick Actions */}
-          <Card className="shadow-card hover:shadow-hover transition-all duration-300">
-            <CardHeader>
-              <CardTitle>Ações Rápidas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start hover:bg-primary/10 transition-all duration-200">
-                <Download className="w-4 h-4 mr-2" />
-                Exportar Dados
-              </Button>
-              <Button variant="outline" className="w-full justify-start hover:bg-primary/10 transition-all duration-200">
-                <Upload className="w-4 h-4 mr-2" />
-                Importar Transações
-              </Button>
-              <Button variant="outline" className="w-full justify-start hover:bg-primary/10 transition-all duration-200">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Sincronizar Contas
-              </Button>
-              <Separator />
-              <Button variant="destructive" className="w-full justify-start hover:scale-105 transition-all duration-200">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Limpar Dados
-              </Button>
-            </CardContent>
-          </Card>
         </div>
-
-        {/* Notifications Settings */}
-        <Card className="shadow-card hover:shadow-hover transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Bell className="w-5 h-5" />
-              <span>{t('notifications')}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="email-notifications">Notificações por Email</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receba resumos mensais e alertas importantes por email
-                </p>
-              </div>
-              <Switch 
-                id="email-notifications" 
-                checked={notifications.email}
-                onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, email: checked }))}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="budget-alerts">Alertas de Orçamento</Label>
-                <p className="text-sm text-muted-foreground">
-                  Seja notificado quando exceder limites de gastos
-                </p>
-              </div>
-              <Switch 
-                id="budget-alerts" 
-                checked={notifications.budget}
-                onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, budget: checked }))}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="transaction-notifications">Confirmação de Transações</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receba confirmações para todas as transações
-                </p>
-              </div>
-              <Switch 
-                id="transaction-notifications" 
-                checked={notifications.transactions}
-                onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, transactions: checked }))}
-              />
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Appearance Settings */}
         <Card className="shadow-card hover:shadow-hover transition-all duration-300">
@@ -337,7 +240,7 @@ const SettingsPage = () => {
         </Card>
 
         {/* Security Settings */}
-        <Card className="shadow-card hover:shadow-hover transition-all duration-300">
+  <Card className="shadow-card hover:shadow-hover transition-all duration-300">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Shield className="w-5 h-5" />
@@ -345,16 +248,6 @@ const SettingsPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Autenticação de Dois Fatores</Label>
-                <p className="text-sm text-muted-foreground">
-                  Adicione uma camada extra de segurança à sua conta
-                </p>
-              </div>
-              <Badge variant="secondary">Não configurado</Badge>
-            </div>
-            <Separator />
             <div className="space-y-4">
               <Label>Alterar Senha</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -378,61 +271,6 @@ const SettingsPage = () => {
                 checked={security.sessionTimeout}
                 onCheckedChange={(checked) => setSecurity(prev => ({ ...prev, sessionTimeout: checked }))}
               />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Data & Privacy */}
-        <Card className="shadow-card hover:shadow-hover transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Globe className="w-5 h-5" />
-              <span>Dados e Privacidade</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Compartilhamento de Dados</Label>
-                <p className="text-sm text-muted-foreground">
-                  Permitir análises anônimas para melhorar o serviço
-                </p>
-              </div>
-              <Switch 
-                checked={privacy.dataSharing}
-                onCheckedChange={(checked) => setPrivacy(prev => ({ ...prev, dataSharing: checked }))}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Backup Automático</Label>
-                <p className="text-sm text-muted-foreground">
-                  Fazer backup dos seus dados automaticamente
-                </p>
-              </div>
-              <Switch 
-                checked={privacy.autoBackup}
-                onCheckedChange={(checked) => setPrivacy(prev => ({ ...prev, autoBackup: checked }))}
-              />
-            </div>
-            <Separator />
-            <div className="space-y-2">
-              <Label>Período de Retenção de Dados</Label>
-              <Select 
-                value={privacy.dataRetention}
-                onValueChange={(value) => setPrivacy(prev => ({ ...prev, dataRetention: value }))}
-              >
-                <SelectTrigger className="md:w-1/2 transition-all duration-200 hover:border-primary/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-popover">
-                  <SelectItem value="1year">1 ano</SelectItem>
-                  <SelectItem value="2years">2 anos</SelectItem>
-                  <SelectItem value="5years">5 anos</SelectItem>
-                  <SelectItem value="indefinite">Indefinido</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
