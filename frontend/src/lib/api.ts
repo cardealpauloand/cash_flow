@@ -109,8 +109,8 @@ export interface TransactionCreatePayload {
   tags?: number[];
   subs?: Array<{
     value: number;
-    category_id?: number;
-    sub_category_id?: number;
+    category_id: number;
+    sub_category_id: number;
   }>;
 }
 export interface DashboardSummary {
@@ -135,6 +135,18 @@ export interface DashboardSummary {
   }>;
   date_from: string;
   date_to: string;
+}
+export interface ReportsSummary {
+  date_from: string;
+  date_to: string;
+  monthly: Array<{
+    month: string;
+    income: number;
+    expenses: number;
+    net: number;
+  }>;
+  categories: Array<{ name: string; value: number; percentage: number }>;
+  totals: { income: number; expenses: number; net: number };
 }
 
 export const api = {
@@ -212,6 +224,14 @@ export const api = {
         ? `?${new URLSearchParams(params as Record<string, string>)}`
         : "";
       return request<DashboardSummary>(`/dashboard/summary${query}`);
+    },
+  },
+  reports: {
+    summary(params?: { date_from?: string; date_to?: string }) {
+      const query = params
+        ? `?${new URLSearchParams(params as Record<string, string>)}`
+        : "";
+      return request<ReportsSummary>(`/reports/summary${query}`);
     },
   },
   misc: {

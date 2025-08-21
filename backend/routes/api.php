@@ -1,6 +1,7 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{AuthController, UserController, AccountController, TransactionController, CategoryController, SubCategoryController, TagController, DashboardController};
+use App\Http\Controllers\ReportsController;
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
@@ -20,4 +21,5 @@ Route::middleware('auth:api')->group(function () {
     Route::get('tags', [TagController::class, 'index']);
 
     Route::get('dashboard/summary', [DashboardController::class, 'summary']);
+    Route::get('reports/summary', [ReportsController::class, 'summary']);
 });
