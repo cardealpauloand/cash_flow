@@ -109,9 +109,44 @@ export interface TransactionCreatePayload {
   tags?: number[];
   subs?: Array<{
     value: number;
-    category_id?: number;
-    sub_category_id?: number;
+    category_id: number;
+    sub_category_id: number;
   }>;
+}
+export interface DashboardSummary {
+  total_balance: number;
+  monthly_income: number;
+  monthly_expenses: number;
+  net_flow: number;
+  accounts: Array<{
+    id: number;
+    name: string;
+    type: string;
+    balance: number;
+    percentage?: number;
+  }>;
+  recent_transactions: Array<{
+    id: number;
+    type: "income" | "expense" | "transfer";
+    description: string;
+    amount: number;
+    account: string;
+    date: string;
+  }>;
+  date_from: string;
+  date_to: string;
+}
+export interface ReportsSummary {
+  date_from: string;
+  date_to: string;
+  monthly: Array<{
+    month: string;
+    income: number;
+    expenses: number;
+    net: number;
+  }>;
+  categories: Array<{ name: string; value: number; percentage: number }>;
+  totals: { income: number; expenses: number; net: number };
 }
 
 export const api = {
@@ -181,6 +216,22 @@ export const api = {
       return request<{ deleted: boolean }>(`/transactions/${id}`, {
         method: "DELETE",
       });
+    },
+  },
+  dashboard: {
+    summary(params?: { date_from?: string; date_to?: string }) {
+      const query = params
+        ? `?${new URLSearchParams(params as Record<string, string>)}`
+        : "";
+      return request<DashboardSummary>(`/dashboard/summary${query}`);
+    },
+  },
+  reports: {
+    summary(params?: { date_from?: string; date_to?: string }) {
+      const query = params
+        ? `?${new URLSearchParams(params as Record<string, string>)}`
+        : "";
+      return request<ReportsSummary>(`/reports/summary${query}`);
     },
   },
   misc: {

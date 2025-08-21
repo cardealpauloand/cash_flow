@@ -34,14 +34,7 @@ const navItems = [
 
 export const Navigation = () => {
   const location = useLocation();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { t } = useApp();
-
-  const handleNewTransaction = (transaction: TransactionFormSubmitPayload) => {
-    console.log("Nova transação:", transaction);
-    // Aqui você adicionaria a lógica para salvar a transação
-    setIsModalOpen(false);
-  };
 
   return (
     <nav className="border-b shadow-card backdrop-blur-sm navbar-bg">
@@ -84,29 +77,7 @@ export const Navigation = () => {
 
           <div className="flex items-center space-x-3">
             <ThemeToggle />
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  size="sm"
-                  className="bg-gradient-income hover:scale-105 transition-all duration-200 shadow-card"
-                >
-                  <Plus size={16} className="mr-1" />
-                  {t("newTransaction")}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{t("newTransaction")}</DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados para criar uma nova transação.
-                  </DialogDescription>
-                </DialogHeader>
-                <TransactionForm
-                  onSubmit={handleNewTransaction}
-                  onCancel={() => setIsModalOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
+
             <UserMenu />
           </div>
         </div>
