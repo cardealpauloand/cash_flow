@@ -54,6 +54,7 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useToast } from "@/hooks/use-toast";
 import { InstallmentListItem } from "@/lib/api";
+import TransactionsTable from "@/components/TransactionsTable";
 
 const transactionIcons = {
   income: { icon: ArrowUpRight, color: "text-income" },
@@ -217,6 +218,77 @@ const TransactionsPage = () => {
               />
             </DialogContent>
           </Dialog>
+          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Editar transação</DialogTitle>
+                {editingTx && (
+                  <DialogDescription>
+                    Editando parcela #{editingTx.id}
+                  </DialogDescription>
+                )}
+              </DialogHeader>
+              {editingTx && (
+                <TransactionForm
+                  onSubmit={handleUpdateTransaction}
+                  onCancel={() => {
+                    setIsEditModalOpen(false);
+                    setEditingTx(null);
+                  }}
+                  initialData={{
+                    id: String(editingTx.id),
+                    type: mapType(editingTx.transaction_type_id),
+                    description: editingTx.notes || "",
+                    amount: editingTx.value,
+                    account: String(editingTx.account_id),
+                    date: editingTx.date,
+                    // Se houver subs, mapear para UI_SubCategory
+                    subCategories: editingTx.subs?.length
+                      ? editingTx.subs.map((s) => ({
+                          id: String(s.id),
+                          value: s.value,
+                          categoryId: s.category_id ?? undefined,
+                          subCategoryId: s.sub_category_id ?? undefined,
+                        }))
+                      : undefined,
+                    // Categoria simples apenas se não houver múltiplos subs (ou seja, exatamente 1 com category)
+                    category:
+                      editingTx.subs &&
+                      editingTx.subs.length === 1 &&
+                      editingTx.subs[0].category_id
+                        ? String(editingTx.subs[0].category_id)
+                        : undefined,
+                  }}
+                  isEditing
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+          <AlertDialog
+            open={!!deletingTx}
+            onOpenChange={() => setDeletingTx(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir a parcela #{deletingTx?.id}?
+                  Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() =>
+                    deletingTx && handleDeleteTransaction(deletingTx)
+                  }
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* Summary Cards */}
@@ -312,176 +384,15 @@ const TransactionsPage = () => {
         </Card>
 
         {/* Transactions List */}
-        <Card className="shadow-card hover:shadow-hover transition-all duration-300">
-          <CardHeader>
-            <CardTitle>{installments.length} parcelas encontradas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {installments.map((inst) => {
-                const logicalType = mapType(inst.transaction_type_id);
-                const { icon: Icon, color } = transactionIcons[logicalType];
-                return (
-                  <div
-                    key={inst.id}
-                    className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all duration-200 animate-fade-in group"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div
-                        className={cn(
-                          "p-3 rounded-full bg-background shadow-card hover:shadow-hover transition-all duration-200",
-                          color
-                        )}
-                      >
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-lg">
-                          Parcela #{inst.id}
-                        </p>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <span>
-                            {accounts.list.data?.find(
-                              (a) => a.id === inst.account_id
-                            )?.name || "Conta"}
-                          </span>
-                          <span>•</span>
-                          <span>{formatDate(inst.date)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p
-                          className={cn(
-                            "font-semibold text-xl",
-                            logicalType === "income"
-                              ? "text-income"
-                              : logicalType === "expense"
-                              ? "text-expense"
-                              : "text-transfer"
-                          )}
-                        >
-                          {logicalType === "income"
-                            ? "+"
-                            : logicalType === "expense"
-                            ? "-"
-                            : ""}
-                          {formatCurrency(inst.value)}
-                        </p>
-                        <Badge variant="outline" className="text-xs mt-1">
-                          {t(transactionLabels[logicalType])}
-                        </Badge>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-primary/10"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem
-                            onClick={() => handleEditTransaction(inst)}
-                            className="cursor-pointer hover:bg-primary/10"
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setDeletingTx(inst)}
-                            className="cursor-pointer hover:bg-destructive/10 text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Edit Transaction Modal (placeholder) */}
-        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Editar transação</DialogTitle>
-              {editingTx && (
-                <DialogDescription>
-                  Editando parcela #{editingTx.id}
-                </DialogDescription>
-              )}
-            </DialogHeader>
-            {editingTx && (
-              <TransactionForm
-                onSubmit={handleUpdateTransaction}
-                onCancel={() => {
-                  setIsEditModalOpen(false);
-                  setEditingTx(null);
-                }}
-                initialData={{
-                  id: String(editingTx.id),
-                  type: mapType(editingTx.transaction_type_id),
-                  description: editingTx.notes || "",
-                  amount: editingTx.value,
-                  account: String(editingTx.account_id),
-                  date: editingTx.date,
-                  // Se houver subs, mapear para UI_SubCategory
-                  subCategories: editingTx.subs?.length
-                    ? editingTx.subs.map((s) => ({
-                        id: String(s.id),
-                        value: s.value,
-                        categoryId: s.category_id ?? undefined,
-                        subCategoryId: s.sub_category_id ?? undefined,
-                      }))
-                    : undefined,
-                  // Categoria simples apenas se não houver múltiplos subs (ou seja, exatamente 1 com category)
-                  category:
-                    editingTx.subs &&
-                    editingTx.subs.length === 1 &&
-                    editingTx.subs[0].category_id
-                      ? String(editingTx.subs[0].category_id)
-                      : undefined,
-                }}
-                isEditing
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog
-          open={!!deletingTx}
-          onOpenChange={() => setDeletingTx(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir a parcela #{deletingTx?.id}? Esta
-                ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() =>
-                  deletingTx && handleDeleteTransaction(deletingTx)
-                }
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <TransactionsTable
+          installments={installments}
+          accounts={accounts.list.data || []}
+          formatCurrency={formatCurrency}
+          t={t}
+          formatDate={formatDate}
+          onEdit={handleEditTransaction}
+          onDelete={(inst) => setDeletingTx(inst)}
+        />
       </div>
     </Layout>
   );
