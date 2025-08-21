@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,7 +25,10 @@ import SubCategoryManager, { SubCategory } from "./SubCategoryManager";
 import InstallmentManager, { Installment } from "./InstallmentManager";
 import { useReferenceData } from "@/contexts/ReferenceDataContext";
 import { useAccounts } from "@/hooks/useAccounts";
-import { api } from "@/lib/api";
+import { Form } from "@unform/web";
+import { FormHandles, useField } from "@unform/core";
+import UnformInput from "./unform/UnformInput";
+import UnformSelect from "./unform/UnformSelect";
 
 export interface TransactionFormSubmitPayload {
   id?: string;
@@ -72,6 +74,8 @@ const TransactionForm = ({
   initialData,
   isEditing = false,
 }: TransactionFormProps) => {
+  // Remover formData consolidado e usar Unform
+  const formRef = useRef<FormHandles>(null);
   const [date, setDate] = useState<Date>(
     initialData?.date ? new Date(initialData.date) : new Date()
   );
@@ -83,20 +87,21 @@ const TransactionForm = ({
   const [installments, setInstallments] = useState<Installment[]>(
     initialData?.installments || []
   );
-  const [formData, setFormData] = useState({
-    type: initialData?.type || "",
-    description: initialData?.description || "",
-    amount: initialData?.amount?.toString() || "",
-    category: initialData?.category || "",
-    account: initialData?.account || "",
-  });
 
   const ref = useReferenceData();
   const accounts = useAccounts();
 
   useEffect(() => {
-    console.log("Initial data loaded:", ref);
-  }, [ref]);
+    if (initialData) {
+      formRef.current?.setData({
+        type: initialData.type || "",
+        description: initialData.description || "",
+        amount: initialData.amount?.toString() || "",
+        category: initialData.category || "",
+        account: initialData.account || "",
+      });
+    }
+  }, [initialData]);
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -104,44 +109,43 @@ const TransactionForm = ({
       setNewTag("");
     }
   };
+  const handleRemoveTag = (tagToRemove: string) =>
+    setTags(tags.filter((t) => t !== tagToRemove));
 
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
-  };
+  const internalSubmit = useCallback(
+    (data: {
+      type: string;
+      description: string;
+      amount: string;
+      category?: string;
+      account: string;
+    }) => {
+      // data contém: type, description, amount, category, account
+      let finalAmount: number;
+      if (installments.length > 0) {
+        finalAmount = installments.reduce((sum, i) => sum + i.amount, 0);
+      } else if (subCategories.length > 0) {
+        finalAmount = subCategories.reduce((sum, s) => sum + s.value, 0);
+      } else {
+        finalAmount = parseFloat(data.amount);
+      }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Determinar o valor final baseado na prioridade: parcelas > subcategorias > valor direto
-    let finalAmount: number;
-    if (installments.length > 0) {
-      finalAmount = installments.reduce(
-        (sum, installment) => sum + installment.amount,
-        0
-      );
-    } else if (subCategories.length > 0) {
-      finalAmount = subCategories.reduce((sum, sub) => sum + sub.value, 0);
-    } else {
-      finalAmount = parseFloat(formData.amount);
-    }
-
-    // Montagem do payload interno (mantém compatibilidade com onSubmit atual)
-    const transaction = {
-      ...(initialData?.id && { id: initialData.id }),
-      ...formData,
-      amount: finalAmount,
-      date: format(date, "yyyy-MM-dd"),
-      tags: tags.length > 0 ? tags : undefined,
-      subCategories: subCategories.length > 0 ? subCategories : undefined,
-      installments: installments.length > 0 ? installments : undefined,
-    };
-
-    onSubmit(transaction); // mantém fluxo atual
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+      const payload = {
+        ...(initialData?.id && { id: initialData.id }),
+        type: data.type,
+        description: data.description,
+        amount: finalAmount,
+        category: data.category || undefined,
+        account: data.account,
+        date: format(date, "yyyy-MM-dd"),
+        tags: tags.length ? tags : undefined,
+        subCategories: subCategories.length ? subCategories : undefined,
+        installments: installments.length ? installments : undefined,
+      };
+      onSubmit(payload);
+    },
+    [installments, subCategories, date, tags, onSubmit, initialData?.id]
+  );
 
   return (
     <Card className="shadow-card">
@@ -151,90 +155,66 @@ const TransactionForm = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <Form
+          ref={formRef}
+          onSubmit={internalSubmit}
+          className="space-y-4"
+          onPointerEnterCapture={() => {}}
+          onPointerLeaveCapture={() => {}}
+          placeholder=""
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="type">Tipo *</Label>
-              <Select
-                onValueChange={(value) => handleInputChange("type", value)}
-                value={formData.type}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="income">Receita</SelectItem>
-                  <SelectItem value="expense">Despesa</SelectItem>
-                  <SelectItem value="transfer">Transferência</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="amount">Valor *</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={formData.amount}
-                onChange={(e) => handleInputChange("amount", e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição *</Label>
-            <Input
-              id="description"
-              placeholder="Descreva a transação"
-              value={formData.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
+            <UnformSelect
+              name="type"
+              label="Tipo"
+              required
+              placeholder="Selecione o tipo"
+            >
+              <SelectItem value="income">Receita</SelectItem>
+              <SelectItem value="expense">Despesa</SelectItem>
+              <SelectItem value="transfer">Transferência</SelectItem>
+            </UnformSelect>
+            <UnformInput
+              name="amount"
+              label="Valor"
+              type="number"
+              step="0.01"
+              placeholder="0,00"
               required
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">Categoria</Label>
-              <Select
-                onValueChange={(value) => handleInputChange("category", value)}
-                value={formData.category}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ref.categories.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <UnformInput
+            name="description"
+            label="Descrição"
+            placeholder="Descreva a transação"
+            required
+          />
 
-            <div className="space-y-2">
-              <Label htmlFor="account">Conta *</Label>
-              <Select
-                onValueChange={(value) => handleInputChange("account", value)}
-                value={formData.account}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.list.data?.map((acc) => (
-                    <SelectItem key={acc.id} value={String(acc.id)}>
-                      {acc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UnformSelect
+              name="category"
+              label="Categoria"
+              placeholder="Selecione a categoria"
+            >
+              {ref.categories.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </UnformSelect>
+            <UnformSelect
+              name="account"
+              label="Conta"
+              required
+              placeholder="Selecione a conta"
+            >
+              {accounts.list.data?.map((acc) => (
+                <SelectItem key={acc.id} value={String(acc.id)}>
+                  {acc.name}
+                </SelectItem>
+              ))}
+            </UnformSelect>
           </div>
 
           <div className="space-y-2">
@@ -258,7 +238,7 @@ const TransactionForm = ({
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={(date) => date && setDate(date)}
+                  onSelect={(d) => d && setDate(d)}
                   initialFocus
                 />
               </PopoverContent>
@@ -308,18 +288,23 @@ const TransactionForm = ({
             )}
           </div>
 
-          {/* Gerenciador de Subcategorias */}
           <SubCategoryManager
             subCategories={subCategories}
             onSubCategoriesChange={setSubCategories}
-            totalValue={parseFloat(formData.amount) || 0}
+            totalValue={
+              parseFloat(
+                (formRef.current?.getFieldValue("amount") as string) || "0"
+              ) || 0
+            }
           />
-
-          {/* Gerenciador de Parcelas */}
           <InstallmentManager
             installments={installments}
             onInstallmentsChange={setInstallments}
-            totalAmount={parseFloat(formData.amount) || 0}
+            totalAmount={
+              parseFloat(
+                (formRef.current?.getFieldValue("amount") as string) || "0"
+              ) || 0
+            }
           />
 
           <div className="flex space-x-3 pt-4">
@@ -335,7 +320,7 @@ const TransactionForm = ({
               Cancelar
             </Button>
           </div>
-        </form>
+        </Form>
       </CardContent>
     </Card>
   );

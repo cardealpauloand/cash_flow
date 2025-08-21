@@ -49,7 +49,7 @@ import { cn } from "@/lib/utils";
 import { useApp } from "@/contexts/AppContext";
 import TransactionForm from "@/components/forms/TransactionForm";
 import { SubCategory as UI_SubCategory } from "@/components/forms/SubCategoryManager";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useToast } from "@/hooks/use-toast";
