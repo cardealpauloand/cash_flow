@@ -124,12 +124,11 @@ const TransactionsPage = () => {
     category?: string;
     subCategories?: UI_SubCategory[];
     tags?: string[];
+    installments_count?: number; // novo
   }
   const handleNewTransaction = async (form: FormSubmitPayload) => {
-    // form.type vem como string genérica do TransactionForm, garantir narrow
     const type = form.type as string as "income" | "expense" | "transfer";
     try {
-      // Construir subs se existirem subCategories (cada item vira um sub)
       const subs = (form.subCategories || []).map((sc) => ({
         value: sc.value,
         category_id: sc.categoryId,
@@ -147,6 +146,10 @@ const TransactionsPage = () => {
         notes: form.description,
         category_id,
         subs: subs.length ? subs : undefined,
+        installments_count:
+          form.installments_count && form.installments_count > 1
+            ? form.installments_count
+            : undefined,
       });
       toast({ title: "Transação criada" });
       setIsModalOpen(false);

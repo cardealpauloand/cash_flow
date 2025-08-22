@@ -112,6 +112,8 @@ export interface TransactionCreatePayload {
     category_id: number;
     sub_category_id: number;
   }>;
+  // Novo campo para parcelamento automático no backend
+  installments_count?: number; // quando >1 backend cria N parcelas iguais (ajustando última)
 }
 export interface DashboardSummary {
   total_balance: number;

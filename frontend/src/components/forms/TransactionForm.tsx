@@ -22,7 +22,6 @@ import { ptBR } from "date-fns/locale";
 import { CalendarIcon, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SubCategoryManager, { SubCategory } from "./SubCategoryManager";
-import InstallmentManager, { Installment } from "./InstallmentManager";
 import { useReferenceData } from "@/contexts/ReferenceDataContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { Form } from "@unform/web";
@@ -40,7 +39,7 @@ export interface TransactionFormSubmitPayload {
   date: string;
   tags?: string[];
   subCategories?: SubCategory[];
-  installments?: Installment[];
+  installments_count?: number;
 }
 
 // Payload real esperado pelo backend (simplificado)
@@ -84,9 +83,9 @@ const TransactionForm = ({
   const [subCategories, setSubCategories] = useState<SubCategory[]>(
     initialData?.subCategories || []
   );
-  const [installments, setInstallments] = useState<Installment[]>(
-    initialData?.installments || []
-  );
+  const [installmentsEnabled, setInstallmentsEnabled] =
+    useState<boolean>(false);
+  const [installmentsCount, setInstallmentsCount] = useState<number>(2);
 
   const ref = useReferenceData();
   const accounts = useAccounts();
@@ -120,17 +119,14 @@ const TransactionForm = ({
       category?: string;
       account: string;
     }) => {
-      // data contém: type, description, amount, category, account
       let finalAmount: number;
-      if (installments.length > 0) {
-        finalAmount = installments.reduce((sum, i) => sum + i.amount, 0);
-      } else if (subCategories.length > 0) {
+      if (subCategories.length > 0) {
         finalAmount = subCategories.reduce((sum, s) => sum + s.value, 0);
       } else {
         finalAmount = parseFloat(data.amount);
       }
 
-      const payload = {
+      const payload: TransactionFormSubmitPayload = {
         ...(initialData?.id && { id: initialData.id }),
         type: data.type,
         description: data.description,
@@ -140,11 +136,22 @@ const TransactionForm = ({
         date: format(date, "yyyy-MM-dd"),
         tags: tags.length ? tags : undefined,
         subCategories: subCategories.length ? subCategories : undefined,
-        installments: installments.length ? installments : undefined,
+        installments_count:
+          installmentsEnabled && installmentsCount > 1
+            ? installmentsCount
+            : undefined,
       };
       onSubmit(payload);
     },
-    [installments, subCategories, date, tags, onSubmit, initialData?.id]
+    [
+      subCategories,
+      date,
+      tags,
+      onSubmit,
+      initialData?.id,
+      installmentsEnabled,
+      installmentsCount,
+    ]
   );
 
   return (
@@ -297,15 +304,48 @@ const TransactionForm = ({
               ) || 0
             }
           />
-          <InstallmentManager
-            installments={installments}
-            onInstallmentsChange={setInstallments}
-            totalAmount={
-              parseFloat(
-                (formRef.current?.getFieldValue("amount") as string) || "0"
-              ) || 0
-            }
-          />
+
+          <div className="space-y-2 p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <input
+                id="enableInstallments"
+                type="checkbox"
+                className="h-4 w-4"
+                checked={installmentsEnabled}
+                onChange={(e) => setInstallmentsEnabled(e.target.checked)}
+                disabled={
+                  (formRef.current?.getFieldValue("type") as string) ===
+                  "transfer"
+                }
+              />
+              <Label htmlFor="enableInstallments" className="cursor-pointer">
+                Parcelar (backend divide valor igualmente)
+              </Label>
+            </div>
+            {installmentsEnabled && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1 sm:col-span-1">
+                  <Label htmlFor="installmentsCount">Nº Parcelas</Label>
+                  <Input
+                    id="installmentsCount"
+                    type="number"
+                    min={2}
+                    max={60}
+                    value={installmentsCount}
+                    onChange={(e) =>
+                      setInstallmentsCount(
+                        Math.max(2, parseInt(e.target.value) || 2)
+                      )
+                    }
+                  />
+                </div>
+                <div className="sm:col-span-2 text-sm text-muted-foreground flex items-end">
+                  O backend criará {installmentsCount} parcelas. A última pode
+                  ajustar centavos.
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex space-x-3 pt-4">
             <Button type="submit" className="flex-1">

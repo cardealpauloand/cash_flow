@@ -29,9 +29,15 @@ class TransactionRequest extends FormRequest
             'subs.*.value' => ['required_with:subs', 'numeric', 'min:0.01'],
             'subs.*.category_id' => ['nullable', 'integer', 'exists:category,id'],
             'subs.*.sub_category_id' => ['nullable', 'integer', 'exists:sub_category,id'],
+            // Novo: quantidade de parcelas (default = 1)
+            'installments_count' => ['nullable', 'integer', 'min:1'],
         ];
         if ($this->input('transaction_type') === 'transfer') {
             $base['account_out_id'] = ['required', 'integer', 'different:account_id', 'exists:accounts,id'];
+            // Para transfer não permitimos parcelamento > 1 (regra de negócio atual)
+            if ((int) $this->input('installments_count', 1) > 1) {
+                $base['installments_count'][] = 'in:1';
+            }
         } else {
             $base['account_out_id'] = ['prohibited'];
         }
