@@ -175,6 +175,19 @@ export const api = {
   me() {
     return request<ApiUser>(`/users/me`);
   },
+  updateMe(data: {
+    name?: string;
+    password?: string;
+    current_password?: string;
+  }) {
+    return request<
+      ApiUser,
+      { name?: string; password?: string; current_password?: string }
+    >(`/users/me`, {
+      method: "PUT",
+      body: data,
+    });
+  },
   accounts: {
     list() {
       return request<AccountResponse[]>(`/accounts`);
