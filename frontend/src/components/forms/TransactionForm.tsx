@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,8 @@ import { Form } from "@unform/web";
 import { FormHandles, useField } from "@unform/core";
 import UnformInput from "./unform/UnformInput";
 import UnformSelect from "./unform/UnformSelect";
+import { useQuery } from "@tanstack/react-query";
+import { api, DashboardSummary } from "@/lib/api";
 
 export interface TransactionFormSubmitPayload {
   id?: string;
@@ -36,6 +38,7 @@ export interface TransactionFormSubmitPayload {
   amount: number;
   category?: string;
   account: string;
+  account_out_id?: string;
   date: string;
   tags?: string[];
   subCategories?: SubCategory[];
@@ -89,6 +92,14 @@ const TransactionForm = ({
 
   const ref = useReferenceData();
   const accounts = useAccounts();
+  // Dashboard summary (para obter saldo por conta)
+  const { data: dashboard } = useQuery<DashboardSummary>({
+    queryKey: ["dashboard", "summary"],
+    queryFn: () => api.dashboard.summary(),
+    staleTime: 30_000,
+  });
+  const [formError, setFormError] = useState<string>("");
+  const [isTransfer, setIsTransfer] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialData) {
@@ -98,7 +109,10 @@ const TransactionForm = ({
         amount: initialData.amount?.toString() || "",
         category: initialData.category || "",
         account: initialData.account || "",
+        account_out_id: initialData.account_out_id || "",
       });
+      // Ajusta UI para mostrar campos específicos quando for transferência
+      setIsTransfer(initialData.type === "transfer");
     }
   }, [initialData]);
 
@@ -117,13 +131,33 @@ const TransactionForm = ({
       description: string;
       amount: string;
       category?: string;
-      account: string;
+  account: string;
+  account_out_id?: string;
     }) => {
-      let finalAmount: number;
-      if (subCategories.length > 0) {
+      setFormError("");
+      // Amount precedence: for transfers always use the typed amount; for income/expense, if subs exist, sum them
+      let finalAmount: number = parseFloat(data.amount);
+      if (data.type !== "transfer" && subCategories.length > 0) {
         finalAmount = subCategories.reduce((sum, s) => sum + s.value, 0);
-      } else {
-        finalAmount = parseFloat(data.amount);
+      }
+      if (!isFinite(finalAmount) || finalAmount <= 0) {
+        setFormError("Informe um valor válido.");
+        return;
+      }
+
+      // Validação cliente: impedir transferir acima do saldo disponível da conta de origem
+      if (data.type === "transfer") {
+        const originId = Number(data.account_out_id);
+        const originBalance = dashboard?.accounts?.find((a) => a.id === originId)?.balance ?? 0;
+        if (finalAmount > originBalance) {
+          setFormError(
+            `Saldo insuficiente na conta de origem. Disponível: ${originBalance.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            })}`
+          );
+          return;
+        }
       }
 
       const payload: TransactionFormSubmitPayload = {
@@ -133,9 +167,10 @@ const TransactionForm = ({
         amount: finalAmount,
         category: data.category || undefined,
         account: data.account,
+  account_out_id: data.account_out_id,
         date: format(date, "yyyy-MM-dd"),
         tags: tags.length ? tags : undefined,
-        subCategories: subCategories.length ? subCategories : undefined,
+  subCategories: subCategories.length ? subCategories : undefined,
         installments_count:
           installmentsEnabled && installmentsCount > 1
             ? installmentsCount
@@ -151,6 +186,7 @@ const TransactionForm = ({
       initialData?.id,
       installmentsEnabled,
       installmentsCount,
+  dashboard,
     ]
   );
 
@@ -176,6 +212,8 @@ const TransactionForm = ({
               label="Tipo"
               required
               placeholder="Selecione o tipo"
+              onChangeValue={(v) => setIsTransfer(v === "transfer")}
+              defaultValue={initialData?.type}
             >
               <SelectItem value="income">Receita</SelectItem>
               <SelectItem value="expense">Despesa</SelectItem>
@@ -212,9 +250,10 @@ const TransactionForm = ({
             </UnformSelect>
             <UnformSelect
               name="account"
-              label="Conta"
+              label="Conta (destino)"
               required
-              placeholder="Selecione a conta"
+              placeholder="Selecione a conta de destino"
+              defaultValue={initialData?.account}
             >
               {accounts.list.data?.map((acc) => (
                 <SelectItem key={acc.id} value={String(acc.id)}>
@@ -222,7 +261,36 @@ const TransactionForm = ({
                 </SelectItem>
               ))}
             </UnformSelect>
+            {isTransfer && (
+              <UnformSelect
+                name="account_out_id"
+                label="Conta de origem"
+                required
+                placeholder="Selecione a conta de origem"
+                defaultValue={initialData?.account_out_id}
+              >
+                {accounts.list.data?.map((acc) => (
+                  <SelectItem key={acc.id} value={String(acc.id)}>
+                    {acc.name}
+                  </SelectItem>
+                ))}
+              </UnformSelect>
+            )}
           </div>
+
+          {isTransfer && (
+            <div className="text-xs text-muted-foreground">
+              {(() => {
+                const oid = Number(
+                  (formRef.current?.getFieldValue("account_out_id") as string) || ""
+                );
+                const bal = dashboard?.accounts?.find((a) => a.id === oid)?.balance;
+                return bal !== undefined
+                  ? `Saldo na origem: ${bal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+                  : null;
+              })()}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Data</Label>
@@ -251,6 +319,10 @@ const TransactionForm = ({
               </PopoverContent>
             </Popover>
           </div>
+
+          {formError && (
+            <div className="text-sm text-destructive">{formError}</div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="tags">Tags</Label>
@@ -313,16 +385,13 @@ const TransactionForm = ({
                 className="h-4 w-4"
                 checked={installmentsEnabled}
                 onChange={(e) => setInstallmentsEnabled(e.target.checked)}
-                disabled={
-                  (formRef.current?.getFieldValue("type") as string) ===
-                  "transfer"
-                }
+                disabled={isTransfer}
               />
               <Label htmlFor="enableInstallments" className="cursor-pointer">
                 Parcelar (backend divide valor igualmente)
               </Label>
             </div>
-            {installmentsEnabled && (
+            {installmentsEnabled && !isTransfer && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1 sm:col-span-1">
                   <Label htmlFor="installmentsCount">Nº Parcelas</Label>

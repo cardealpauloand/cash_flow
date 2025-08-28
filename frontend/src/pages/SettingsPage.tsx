@@ -72,14 +72,10 @@ const SettingsPage = () => {
   };
 
   // Estados dos switches
+
   const [security, setSecurity] = useState({
     sessionTimeout: true,
   });
-
-  // Estados alterar senha
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Função para verificar mudanças
   const checkForChanges = (
@@ -96,7 +92,7 @@ const SettingsPage = () => {
 
   // Handlers para mudanças temporárias
   const handleThemeChange = (newTheme: string) => {
-    setTempTheme(newTheme as typeof theme);
+    setTempTheme(newTheme as any);
     checkForChanges(newTheme, undefined, undefined);
   };
 
@@ -326,55 +322,20 @@ const SettingsPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Senha atual"
                   className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
                 <Input
                   type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Nova senha"
                   className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <Button
-                disabled={isChangingPassword}
-                onClick={async () => {
-                  if (!currentPassword || !newPassword) {
-                    toast.error("Preencha as duas senhas");
-                    return;
-                  }
-                  if (newPassword.length < 6) {
-                    toast.error("Nova senha deve ter ao menos 6 caracteres");
-                    return;
-                  }
-                  if (currentPassword === newPassword) {
-                    toast.error("Nova senha deve ser diferente da atual");
-                    return;
-                  }
-                  try {
-                    setIsChangingPassword(true);
-                    await api.updateMe({
-                      password: newPassword,
-                      current_password: currentPassword,
-                    });
-                    toast.success("Senha alterada com sucesso");
-                    setCurrentPassword("");
-                    setNewPassword("");
-                  } catch (e: unknown) {
-                    const msg =
-                      e instanceof Error ? e.message : "Erro ao alterar senha";
-                    toast.error(msg);
-                  } finally {
-                    setIsChangingPassword(false);
-                  }
-                }}
                 variant="outline"
                 className="w-full md:w-auto hover:bg-primary/10 transition-all duration-200"
               >
-                {isChangingPassword ? "Salvando..." : "Alterar Senha"}
+                Alterar Senha
               </Button>
             </div>
             <Separator />

@@ -2,7 +2,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UserUpdateRequest;
-use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -29,7 +28,6 @@ class UserController extends Controller
             $user->password_hash = Hash::make($request->password);
         }
         $user->save();
-        // Não retornar campo de senha
-        return response()->json($user->makeHidden(['password_hash']));
+        return response()->json($user);
     }
 }

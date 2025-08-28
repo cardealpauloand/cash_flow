@@ -78,6 +78,37 @@ class TransactionController extends Controller
         return DB::transaction(function () use ($request, $userId, $typeRow) {
             $installmentsCount = (int) $request->input('installments_count', 1);
 
+            // Regras específicas para transferência: validar saldo e propriedade das contas
+            if ($request->transaction_type === 'transfer') {
+                // Origem = account_out_id, Destino = account_id
+                $origin = \App\Models\Account::findOrFail($request->account_out_id);
+                $destination = \App\Models\Account::findOrFail($request->account_id);
+                // Verifica se ambas as contas pertencem ao usuário logado
+                if ($origin->user_id !== $userId || $destination->user_id !== $userId) {
+                    abort(403, 'Conta não pertence ao usuário.');
+                }
+
+                $incomeId = TransactionType::where('name', 'income')->value('id');
+                $expenseId = TransactionType::where('name', 'expense')->value('id');
+
+                // Saldo atual da conta de origem: abertura + entradas - saídas (parcelas)
+                $originOpening = (float) ($origin->opening_balance ?? 0);
+                $originIncome = (float) \App\Models\TransactionInstallment::where('user_id', $userId)
+                    ->where('account_id', $origin->id)
+                    ->where('transaction_type_id', $incomeId)
+                    ->sum('value');
+                $originExpense = (float) \App\Models\TransactionInstallment::where('user_id', $userId)
+                    ->where('account_id', $origin->id)
+                    ->where('transaction_type_id', $expenseId)
+                    ->sum('value');
+                $originBalance = round($originOpening + $originIncome - $originExpense, 2);
+                if ($originBalance + 1e-6 < (float) $request->value) {
+                    return response()->json([
+                        'error' => 'Saldo insuficiente na conta de origem.'
+                    ], 422);
+                }
+            }
+
             $tx = Transaction::create([
                 'value' => $request->value,
                 'transaction_type_id' => $typeRow->id,
@@ -245,6 +276,194 @@ class TransactionController extends Controller
     {
         $this->authorize('view', $transaction);
         return response()->json($transaction->load(['type', 'account', 'accountOut', 'installments.subs', 'installments.tags']));
+    }
+
+    public function update(TransactionRequest $request, $id)
+    {
+        $userId = auth('api')->id();
+        $transaction = Transaction::findOrFail($id);
+        if ($transaction->user_id !== $userId) {
+            abort(403, 'Forbidden');
+        }
+
+        $typeRow = TransactionType::where('name', $request->transaction_type)->firstOrFail();
+
+        return DB::transaction(function () use ($request, $transaction, $typeRow, $userId) {
+            // Regras específicas para transferência: validar saldo e propriedade das contas
+            if ($request->transaction_type === 'transfer') {
+                $origin = \App\Models\Account::findOrFail($request->account_out_id);
+                $destination = \App\Models\Account::findOrFail($request->account_id);
+                if ($origin->user_id !== $userId || $destination->user_id !== $userId) {
+                    abort(403, 'Conta não pertence ao usuário.');
+                }
+
+                $incomeId = TransactionType::where('name', 'income')->value('id');
+                $expenseId = TransactionType::where('name', 'expense')->value('id');
+
+                $originOpening = (float) ($origin->opening_balance ?? 0);
+                $originIncome = (float) \App\Models\TransactionInstallment::where('user_id', $userId)
+                    ->where('account_id', $origin->id)
+                    ->where('transaction_type_id', $incomeId)
+                    ->sum('value');
+                $originExpense = (float) \App\Models\TransactionInstallment::where('user_id', $userId)
+                    ->where('account_id', $origin->id)
+                    ->where('transaction_type_id', $expenseId)
+                    ->sum('value');
+                // If keeping the same origin, add back the current transaction's expense to simulate replacement
+                $originBalance = round($originOpening + $originIncome - $originExpense, 2);
+                $prevOriginId = $transaction->account_out_id;
+                if ($prevOriginId && (int)$prevOriginId === (int)$origin->id) {
+                    $prevExpense = (float) \App\Models\TransactionInstallment::where('transaction_id', $transaction->id)
+                        ->where('transaction_type_id', $expenseId)
+                        ->where('account_id', $origin->id)
+                        ->sum('value');
+                    $originBalance = round($originBalance + $prevExpense, 2);
+                }
+                if ($originBalance + 1e-6 < (float) $request->value) {
+                    return response()->json([
+                        'error' => 'Saldo insuficiente na conta de origem.'
+                    ], 422);
+                }
+            }
+            // Update root transaction fields
+            $transaction->value = $request->value;
+            $transaction->transaction_type_id = $typeRow->id;
+            $transaction->date = $request->date;
+            $transaction->account_id = $request->account_id;
+            $transaction->account_out_id = $request->transaction_type === 'transfer' ? $request->account_out_id : null;
+            $transaction->notes = $request->notes;
+            $transaction->save();
+
+            // Remove existing installments and related subs/tags/categories
+            $instIds = TransactionInstallment::where('transaction_id', $transaction->id)->pluck('id');
+            $subIds = TransactionSub::whereIn('transactions_installments_id', $instIds)->pluck('id');
+            TransactionTag::whereIn('transactions_installments_id', $instIds)->delete();
+            TransactionCategory::whereIn('transactions_sub_id', $subIds)->delete();
+            TransactionSub::whereIn('id', $subIds)->delete();
+            TransactionInstallment::whereIn('id', $instIds)->delete();
+
+            // Recreate installments
+            $installmentsCount = (int) $request->input('installments_count', 1);
+            if ($request->transaction_type === 'transfer') {
+                $incomeId = TransactionType::where('name', 'income')->value('id');
+                $expenseId = TransactionType::where('name', 'expense')->value('id');
+
+                $inInst = TransactionInstallment::create([
+                    'value' => $request->value,
+                    'transaction_id' => $transaction->id,
+                    'transaction_type_id' => $incomeId,
+                    'account_id' => $request->account_id,
+                    'user_id' => $userId,
+                ]);
+                $outInst = TransactionInstallment::create([
+                    'value' => $request->value,
+                    'transaction_id' => $transaction->id,
+                    'transaction_type_id' => $expenseId,
+                    'account_id' => $request->account_out_id,
+                    'user_id' => $userId,
+                ]);
+
+                foreach ([$inInst, $outInst] as $inst) {
+                    if ($request->filled('subs') && is_array($request->subs) && $inst->transaction_type_id === $incomeId) {
+                        foreach ($request->subs as $subPayload) {
+                            $sub = TransactionSub::create([
+                                'transactions_installments_id' => $inst->id,
+                                'value' => $subPayload['value'],
+                            ]);
+                            if (!empty($subPayload['category_id'])) {
+                                TransactionCategory::create([
+                                    'transactions_sub_id' => $sub->id,
+                                    'category_id' => $subPayload['category_id'],
+                                    'sub_category_id' => $subPayload['sub_category_id'] ?? null,
+                                ]);
+                            }
+                        }
+                    } else {
+                        $sub = TransactionSub::create([
+                            'transactions_installments_id' => $inst->id,
+                            'value' => $inst->value,
+                        ]);
+                        if ($inst->transaction_type_id === $incomeId && $request->filled('category_id')) {
+                            TransactionCategory::create([
+                                'transactions_sub_id' => $sub->id,
+                                'category_id' => $request->category_id,
+                                'sub_category_id' => $request->sub_category_id,
+                            ]);
+                        }
+                    }
+                    if ($request->filled('tags')) {
+                        foreach ($request->tags as $tagId) {
+                            TransactionTag::firstOrCreate([
+                                'transactions_installments_id' => $inst->id,
+                                'tag_id' => $tagId,
+                            ]);
+                        }
+                    }
+                }
+            } else {
+                if ($installmentsCount <= 1) {
+                    $installmentsCount = 1;
+                }
+                $total = (float) $request->value;
+                $baseValue = round(floor(($total / $installmentsCount) * 100) / 100, 2);
+                $accum = 0.0;
+                for ($i = 0; $i < $installmentsCount; $i++) {
+                    if ($i < $installmentsCount - 1) {
+                        $val = $baseValue;
+                        $accum += $val;
+                    } else {
+                        $val = round($total - $accum, 2);
+                    }
+                    $inst = TransactionInstallment::create([
+                        'value' => $val,
+                        'transaction_id' => $transaction->id,
+                        'transaction_type_id' => $typeRow->id,
+                        'account_id' => $request->account_id,
+                        'user_id' => $userId,
+                    ]);
+
+                    if ($request->filled('subs') && is_array($request->subs)) {
+                        $ratio = $val / $total;
+                        foreach ($request->subs as $subPayload) {
+                            $subVal = round($subPayload['value'] * $ratio, 2);
+                            $sub = TransactionSub::create([
+                                'transactions_installments_id' => $inst->id,
+                                'value' => $subVal,
+                            ]);
+                            if (!empty($subPayload['category_id'])) {
+                                TransactionCategory::create([
+                                    'transactions_sub_id' => $sub->id,
+                                    'category_id' => $subPayload['category_id'],
+                                    'sub_category_id' => $subPayload['sub_category_id'] ?? null,
+                                ]);
+                            }
+                        }
+                    } else {
+                        $sub = TransactionSub::create([
+                            'transactions_installments_id' => $inst->id,
+                            'value' => $inst->value,
+                        ]);
+                        if ($request->filled('category_id')) {
+                            TransactionCategory::create([
+                                'transactions_sub_id' => $sub->id,
+                                'category_id' => $request->category_id,
+                                'sub_category_id' => $request->sub_category_id,
+                            ]);
+                        }
+                    }
+                    if ($request->filled('tags')) {
+                        foreach ($request->tags as $tagId) {
+                            TransactionTag::firstOrCreate([
+                                'transactions_installments_id' => $inst->id,
+                                'tag_id' => $tagId,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            return response()->json(['updated' => true]);
+        });
     }
 
     public function destroy($id, Request $request)

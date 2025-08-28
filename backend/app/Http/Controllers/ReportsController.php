@@ -18,6 +18,7 @@ class ReportsController extends Controller
         $userId = auth('api')->id();
         $incomeId = TransactionType::where('name', 'income')->value('id');
         $expenseId = TransactionType::where('name', 'expense')->value('id');
+    $transferId = TransactionType::where('name', 'transfer')->value('id');
 
         $start = $request->query('date_from', now()->subMonths(5)->startOfMonth()->toDateString());
         $end = $request->query('date_to', now()->endOfMonth()->toDateString());
@@ -27,6 +28,8 @@ class ReportsController extends Controller
             ->join('transactions', 'transactions.id', '=', 'transactions_installments.transaction_id')
             ->where('transactions_installments.user_id', $userId)
             ->whereBetween('transactions.date', [$start, $end])
+            // Exclude transfers at the root level to avoid counting internal moves as income/expense
+            ->where('transactions.transaction_type_id', '!=', $transferId)
             ->selectRaw("strftime('%Y-%m', transactions.date) as ym,
                 SUM(CASE WHEN transactions_installments.transaction_type_id = ? THEN transactions_installments.value ELSE 0 END) as income,
                 SUM(CASE WHEN transactions_installments.transaction_type_id = ? THEN transactions_installments.value ELSE 0 END) as expenses",
@@ -65,6 +68,8 @@ class ReportsController extends Controller
             ->leftJoin('category', 'category.id', '=', 'transactions_category.category_id')
             ->where('transactions_installments.user_id', $userId)
             ->whereBetween('transactions.date', [$start, $end])
+            // Exclude transfers at the root level for category spending
+            ->where('transactions.transaction_type_id', '!=', $transferId)
             ->where('transactions_installments.transaction_type_id', $expenseId)
             ->selectRaw('category.name as category_name, COALESCE(category.name, "Outros") as final_name, SUM(transactions_sub.value) as total')
             ->groupBy('final_name')

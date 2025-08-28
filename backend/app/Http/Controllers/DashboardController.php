@@ -76,37 +76,45 @@ class DashboardController extends Controller
         $totalBalance = array_reduce($accountsOut, fn($c, $a) => $c + $a['balance'], 0);
         $netFlow = $monthlyIncome - $monthlyExpenses;
 
-        // Recent transactions (last 5 installments)
-        $recent = TransactionInstallment::query()
-            ->join('transactions', 'transactions.id', '=', 'transactions_installments.transaction_id')
-            ->join('accounts as acc', 'acc.id', '=', 'transactions_installments.account_id')
-            ->where('transactions_installments.user_id', $userId)
+        // Recent transactions based on root transactions (ensures transfer appears once)
+        $recentTx = \App\Models\Transaction::query()
+            ->leftJoin('accounts as dest', 'dest.id', '=', 'transactions.account_id')
+            ->leftJoin('accounts as orig', 'orig.id', '=', 'transactions.account_out_id')
+            ->where('transactions.user_id', $userId)
             ->orderBy('transactions.date', 'desc')
             ->limit(5)
             ->get([
-                'transactions_installments.id',
-                'transactions_installments.value',
-                'transactions_installments.transaction_type_id',
-                'transactions.transaction_type_id as root_type_id',
+                'transactions.id as id',
+                'transactions.value',
+                'transactions.transaction_type_id as type_id',
                 'transactions.notes',
                 'transactions.date',
-                'acc.name as account_name',
-            ])
-            ->map(function ($row) use ($incomeId, $expenseId) {
-                $type = $row->transaction_type_id == $incomeId ? 'income' : ($row->transaction_type_id == $expenseId ? 'expense' : 'transfer');
-                $amount = $row->value;
-                if ($type === 'expense') {
-                    $amount = -$amount;
-                }
+                'dest.name as dest_name',
+                'orig.name as origin_name',
+            ]);
+
+        $recent = $recentTx->map(function ($row) use ($incomeId, $expenseId, $transferId) {
+            if ($row->type_id == $transferId) {
                 return [
                     'id' => $row->id,
-                    'type' => $type,
-                    'description' => $row->notes ?: 'Movimentação #' . $row->id,
-                    'amount' => round($amount, 2),
-                    'account' => $row->account_name,
+                    'type' => 'transfer',
+                    'description' => $row->notes ?: 'Transferência',
+                    'amount' => round((float) $row->value, 2),
+                    'account' => trim(($row->origin_name ?? 'Origem') . ' -> ' . ($row->dest_name ?? 'Destino')),
                     'date' => (string) $row->date,
                 ];
-            });
+            }
+            $type = $row->type_id == $incomeId ? 'income' : 'expense';
+            $amount = $type === 'expense' ? -(float) $row->value : (float) $row->value;
+            return [
+                'id' => $row->id,
+                'type' => $type,
+                'description' => $row->notes ?: 'Movimentação #' . $row->id,
+                'amount' => round($amount, 2),
+                'account' => $row->type_id == $incomeId ? ($row->dest_name ?? 'Conta') : ($row->dest_name ?? 'Conta'),
+                'date' => (string) $row->date,
+            ];
+        });
 
         return response()->json([
             'total_balance' => round($totalBalance, 2),

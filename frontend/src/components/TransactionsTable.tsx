@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InstallmentListItem } from "@/lib/api";
+import { useMemo } from "react";
 
 // Map transaction_type_id to logical type
 function mapType(id: number): "income" | "expense" | "transfer" {
@@ -56,15 +57,40 @@ export const TransactionsTable = ({
   onEdit,
   onDelete,
 }: TransactionsTableProps) => {
+  // Build display list: collapse transfer installments to a single row per transaction
+  const displayInstallments = useMemo(() => {
+    const result: InstallmentListItem[] = [];
+    const seenTransferTx = new Set<number>();
+    for (const inst of installments) {
+      const rootType = mapType(inst.root_transaction_type_id);
+      if (rootType === "transfer") {
+        if (seenTransferTx.has(inst.transaction_id)) continue;
+        // Prefer the income side to represent the transfer (value is the same)
+        const pair = installments.find(
+          (i) => i.transaction_id === inst.transaction_id && mapType(i.transaction_type_id) === "income"
+        );
+        const chosen = pair || inst;
+        result.push(chosen);
+        seenTransferTx.add(inst.transaction_id);
+      } else {
+        result.push(inst);
+      }
+    }
+    return result;
+  }, [installments]);
+
   return (
     <Card className="shadow-card hover:shadow-hover transition-all duration-300">
       <CardHeader>
-        <CardTitle>{installments.length} parcelas encontradas</CardTitle>
+        <CardTitle>{displayInstallments.length} parcelas encontradas</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {installments.map((inst) => {
-            const logicalType = mapType(inst.transaction_type_id);
+          {displayInstallments.map((inst) => {
+            const isRootTransfer = mapType(inst.root_transaction_type_id) === "transfer";
+            const logicalType = isRootTransfer
+              ? ("transfer" as const)
+              : mapType(inst.transaction_type_id);
             const { icon: Icon, color } = transactionIcons[logicalType];
             return (
               <div
@@ -87,10 +113,20 @@ export const TransactionsTable = ({
                         : `Movimentação #${inst.id}`}
                     </p>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <span>
-                        {accounts.find((a) => a.id === inst.account_id)?.name ||
-                          "Conta"}
-                      </span>
+                      {logicalType === "transfer" ? (
+                        <span>
+                          {`${
+                            accounts.find((a) => a.id === (inst.account_out_id ?? -1))?.name || "Conta origem"
+                          } -> ${
+                            accounts.find((a) => a.id === (inst.root_account_id ?? -1))?.name || "Conta destino"
+                          }`}
+                        </span>
+                      ) : (
+                        <span>
+                          {accounts.find((a) => a.id === inst.account_id)?.name ||
+                            "Conta"}
+                        </span>
+                      )}
                       <span>•</span>
                       <span>{formatDate(inst.date)}</span>
                     </div>

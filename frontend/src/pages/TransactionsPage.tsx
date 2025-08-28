@@ -53,7 +53,8 @@ import { useEffect, useState } from "react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useToast } from "@/hooks/use-toast";
-import { InstallmentListItem } from "@/lib/api";
+import { InstallmentListItem, api } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 import TransactionsTable from "@/components/TransactionsTable";
 
 const transactionIcons = {
@@ -168,16 +169,51 @@ const TransactionsPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleUpdateTransaction = async () => {
-    // Implementar se backend suportar update (não exposto nas rotas atuais)
-    setIsEditModalOpen(false);
-    setEditingTx(null);
+  const qc = useQueryClient();
+  const handleUpdateTransaction = async (form: FormSubmitPayload) => {
+    if (!editingTx) return;
+    const type = form.type as string as "income" | "expense" | "transfer";
+    try {
+      const subs = (form.subCategories || []).map((sc) => ({
+        value: sc.value,
+        category_id: sc.categoryId,
+        sub_category_id: sc.subCategoryId,
+      }));
+      const category_id =
+        !subs.length && form.category ? Number(form.category) : undefined;
+      await api.transactions.update(editingTx.transaction_id, {
+        transaction_type: type,
+        value: Number(form.amount),
+        date: form.date || new Date().toISOString().slice(0, 10),
+        account_id: Number(form.account_id || form.account),
+        account_out_id: type === "transfer" ? Number(form.account_out_id) : undefined,
+        notes: form.description,
+        category_id,
+        subs: subs.length ? subs : undefined,
+        installments_count:
+          form.installments_count && form.installments_count > 1
+            ? form.installments_count
+            : undefined,
+      });
+  // Invalidate queries to refresh lists and summaries
+  qc.invalidateQueries({ queryKey: ["transactions"] });
+  qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+  qc.invalidateQueries({ queryKey: ["reports", "summary"] });
+      toast({ title: "Transação atualizada" });
+      setIsEditModalOpen(false);
+      setEditingTx(null);
+    } catch (e) {
+      const err = e as Error;
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
   };
 
   const handleDeleteTransaction = async (transaction: InstallmentListItem) => {
     try {
-      await tx.remove.mutateAsync(transaction.id);
-      toast({ title: "Transação removida" });
+  const isTransfer = mapType(transaction.root_transaction_type_id) === "transfer";
+  const idToDelete = isTransfer ? transaction.transaction_id : transaction.id;
+  await tx.remove.mutateAsync(idToDelete);
+  toast({ title: isTransfer ? "Transferência removida" : "Transação removida" });
     } catch (e) {
       const err = e as Error;
       toast({
@@ -240,10 +276,11 @@ const TransactionsPage = () => {
                   }}
                   initialData={{
                     id: String(editingTx.id),
-                    type: mapType(editingTx.transaction_type_id),
+                    type: mapType(editingTx.root_transaction_type_id),
                     description: editingTx.notes || "",
                     amount: editingTx.value,
-                    account: String(editingTx.account_id),
+                    account: String(editingTx.root_account_id || editingTx.account_id),
+                    account_out_id: editingTx.account_out_id ? String(editingTx.account_out_id) : undefined,
                     date: editingTx.date,
                     // Se houver subs, mapear para UI_SubCategory
                     subCategories: editingTx.subs?.length
@@ -274,10 +311,15 @@ const TransactionsPage = () => {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Tem certeza que deseja excluir a parcela #{deletingTx?.id}?
-                  Esta ação não pode ser desfeita.
-                </AlertDialogDescription>
+                {deletingTx && mapType(deletingTx.root_transaction_type_id) === "transfer" ? (
+                  <AlertDialogDescription>
+                    Tem certeza que deseja excluir a transferência inteira? Isso removerá as duas movimentações (entrada e saída). Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                ) : (
+                  <AlertDialogDescription>
+                    Tem certeza que deseja excluir a parcela #{deletingTx?.id}? Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                )}
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
