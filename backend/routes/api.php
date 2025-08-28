@@ -15,9 +15,17 @@ Route::middleware('auth:api')->group(function () {
     Route::put('users/me', [UserController::class, 'updateMe']);
 
     Route::apiResource('accounts', AccountController::class);
+<<<<<<< HEAD
     Route::apiResource('transactions', TransactionController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('sub-categories', [SubCategoryController::class, 'index']);
+=======
+    Route::apiResource('transactions', TransactionController::class)->only(['index', 'store', 'show', 'destroy']);
+    // Full CRUD categories with optional ?with_subs=true
+    Route::apiResource('categories', CategoryController::class);
+    // Full CRUD sub-categories (filter by category_id optional)
+    Route::apiResource('sub-categories', SubCategoryController::class);
+>>>>>>> 8be227f92ff467c3f7f8a1a4f8db1cc1360778fd
     Route::get('tags', [TagController::class, 'index']);
 
     Route::get('dashboard/summary', [DashboardController::class, 'summary']);
