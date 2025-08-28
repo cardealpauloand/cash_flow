@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 const ProfilePage = () => {
   const { user } = useAuth();
@@ -37,6 +38,8 @@ const ProfilePage = () => {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const handleSave = () => {
     // Aqui você salvaria os dados do perfil
@@ -266,6 +269,70 @@ const ProfilePage = () => {
                 <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
                 <h4 className="font-semibold">Senha Forte</h4>
                 <p className="text-sm text-muted-foreground">Última alteração: há 30 dias</p>
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 border rounded-lg">
+              <h4 className="font-semibold mb-4">Alterar Senha</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Senha Atual</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={passwords.current}
+                    onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                    placeholder="Sua senha atual"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nova Senha</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={passwords.next}
+                    onChange={(e) => setPasswords({ ...passwords, next: e.target.value })}
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={passwords.confirm}
+                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                    placeholder="Repita a nova senha"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button
+                  onClick={async () => {
+                    if (!passwords.next || passwords.next.length < 6) {
+                      toast.error("A nova senha deve ter pelo menos 6 caracteres.");
+                      return;
+                    }
+                    if (passwords.next !== passwords.confirm) {
+                      toast.error("As senhas não conferem.");
+                      return;
+                    }
+                    try {
+                      setIsSavingPassword(true);
+                      await api.updateMe({ password: passwords.next });
+                      toast.success("Senha alterada com sucesso.");
+                      setPasswords({ current: "", next: "", confirm: "" });
+                    } catch (e) {
+                      const err = e as Error;
+                      toast.error(err.message || "Erro ao alterar a senha.");
+                    } finally {
+                      setIsSavingPassword(false);
+                    }
+                  }}
+                  disabled={isSavingPassword}
+                >
+                  {isSavingPassword ? "Salvando..." : "Alterar Senha"}
+                </Button>
               </div>
             </div>
           </CardContent>

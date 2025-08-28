@@ -15,7 +15,9 @@ import { useApp } from "@/contexts/AppContext";
 import AccountForm from "@/components/forms/AccountForm";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api, DashboardSummary } from "@/lib/api";
 
 const accountIcons = {
   corrente: CreditCard,
@@ -53,11 +55,27 @@ const AccountsPage = () => {
   const [editingAccount, setEditingAccount] = useState<UiAccount | null>(null);
   const { formatCurrency, t } = useApp();
 
+  // Live balances (same source as Dashboard)
+  const { data: dash } = useQuery<DashboardSummary>({
+    queryKey: ["dashboard", "summary"],
+    queryFn: () => api.dashboard.summary(),
+  });
+
   const apiAccounts: UiAccount[] = (list.data as UiAccount[]) || [];
-  const totalBalance = apiAccounts.reduce(
-    (total: number, account) => total + (account.opening_balance ?? 0),
-    0
-  );
+  const balancesById = useMemo(() => {
+    const map = new Map<number, number>();
+    dash?.accounts.forEach((a) => map.set(a.id, a.balance));
+    return map;
+  }, [dash]);
+  const totalBalance = useMemo(() => {
+    if (dash?.accounts?.length) {
+      return dash.accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+    }
+    return apiAccounts.reduce(
+      (total: number, account) => total + (account.opening_balance ?? 0),
+      0
+    );
+  }, [dash, apiAccounts]);
 
   const handleNewAccount = async (account: {
     name: string;
@@ -182,8 +200,10 @@ const AccountsPage = () => {
         {/* Accounts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {apiAccounts.map((account) => {
+            const currentBalance =
+              balancesById.get(account.id) ?? account.opening_balance ?? 0;
             const Icon = accountIcons[account.type];
-            const isNegative = account.opening_balance < 0;
+            const isNegative = currentBalance < 0;
 
             return (
               <Card
@@ -231,7 +251,7 @@ const AccountsPage = () => {
                         isNegative ? "text-expense" : "text-foreground"
                       }`}
                     >
-                      {formatCurrency(account.opening_balance)}
+                      {formatCurrency(currentBalance)}
                     </p>
                   </div>
                 </CardContent>

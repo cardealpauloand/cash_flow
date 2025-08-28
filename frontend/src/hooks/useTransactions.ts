@@ -33,6 +33,7 @@ export function useTransactions(filters: TransactionsFilters) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+  qc.invalidateQueries({ queryKey: ["reports", "summary"] });
     },
   });
 
@@ -41,6 +42,7 @@ export function useTransactions(filters: TransactionsFilters) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+  qc.invalidateQueries({ queryKey: ["reports", "summary"] });
     },
   });
 

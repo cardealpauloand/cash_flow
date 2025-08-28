@@ -15,6 +15,7 @@ export interface UnformSelectProps {
   children: React.ReactNode;
   required?: boolean;
   defaultValue?: string;
+  onChangeValue?: (value: string) => void;
 }
 
 const UnformSelect = ({
@@ -24,6 +25,7 @@ const UnformSelect = ({
   children,
   required,
   defaultValue,
+  onChangeValue,
 }: UnformSelectProps) => {
   const hiddenRef = useRef<HTMLInputElement | null>(null);
   const { fieldName, defaultValue: dv, registerField, error } = useField(name);
@@ -51,7 +53,10 @@ const UnformSelect = ({
       )}
       <Select
         value={value}
-        onValueChange={(v) => setValue(v)}
+        onValueChange={(v) => {
+          setValue(v);
+          onChangeValue?.(v);
+        }}
         required={required}
       >
         <SelectTrigger>

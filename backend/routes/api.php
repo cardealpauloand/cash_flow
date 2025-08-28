@@ -15,7 +15,7 @@ Route::middleware('auth:api')->group(function () {
     Route::put('users/me', [UserController::class, 'updateMe']);
 
     Route::apiResource('accounts', AccountController::class);
-    Route::apiResource('transactions', TransactionController::class)->only(['index', 'store', 'show', 'destroy']);
+    Route::apiResource('transactions', TransactionController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('sub-categories', [SubCategoryController::class, 'index']);
     Route::get('tags', [TagController::class, 'index']);

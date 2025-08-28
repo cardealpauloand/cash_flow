@@ -175,6 +175,12 @@ export const api = {
   me() {
     return request<ApiUser>(`/users/me`);
   },
+  updateMe(data: Partial<ApiUser> & { password?: string }) {
+    return request<ApiUser, Partial<ApiUser> & { password?: string }>(
+      `/users/me`,
+      { method: "PUT", body: data }
+    );
+  },
   accounts: {
     list() {
       return request<AccountResponse[]>(`/accounts`);
@@ -212,6 +218,12 @@ export const api = {
       return request<TransactionCreateResponse, TransactionCreatePayload>(
         `/transactions`,
         { method: "POST", body: data }
+      );
+    },
+    update(id: number, data: TransactionCreatePayload) {
+      return request<{ updated: boolean }, TransactionCreatePayload>(
+        `/transactions/${id}`,
+        { method: "PUT", body: data }
       );
     },
     delete(id: number) {
