@@ -17,6 +17,14 @@ class UserController extends Controller
         if ($request->filled('name')) {
             $user->name = $request->name;
         }
+        if ($request->filled('email')) {
+            $user->email = $request->email;
+        }
+        if ($request->has('phone')) { // permitir null
+            if (\Schema::hasColumn('users', 'phone')) {
+                $user->phone = $request->phone;
+            }
+        }
         if ($request->filled('password')) {
             $user->password_hash = Hash::make($request->password);
         }

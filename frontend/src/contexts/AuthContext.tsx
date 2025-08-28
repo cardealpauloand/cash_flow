@@ -12,6 +12,7 @@ export interface User {
   id: string; // keep string for UI simplicity
   name: string;
   email: string;
+  phone?: string | null;
   avatar?: string;
 }
 
@@ -22,6 +23,11 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (data: {
+    name?: string;
+    email?: string;
+    phone?: string | null;
+  }) => Promise<void>; // atualiza dados do usuário
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,8 +39,8 @@ interface AuthProviderProps {
 const USER_KEY = "cashflow-user";
 const TOKEN_KEY = "cashflow-token";
 
-function mapUser(u: ApiUser): User {
-  return { id: String(u.id), name: u.name, email: u.email };
+function mapUser(u: ApiUser & { phone?: string | null }): User {
+  return { id: String(u.id), name: u.name, email: u.email, phone: u.phone };
 }
 
 export const useAuth = () => {
@@ -112,6 +118,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     localStorage.removeItem(USER_KEY);
   }, []);
 
+  const updateProfile = useCallback(
+    async (data: { name?: string; email?: string; phone?: string | null }) => {
+      const updated = await api.updateMe(data);
+      const mapped = mapUser(updated);
+      setUser(mapped);
+      localStorage.setItem(USER_KEY, JSON.stringify(mapped));
+    },
+    []
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -121,6 +137,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         login,
         register,
         logout,
+        updateProfile,
       }}
     >
       {children}

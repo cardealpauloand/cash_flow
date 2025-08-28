@@ -14,7 +14,11 @@ class User extends Authenticatable implements JWTSubject
     public $timestamps = false; // schema usa apenas created_at
 
     protected $fillable = [
-        'name','email','password_hash','created_at'
+        'name',
+        'email',
+        'phone',
+        'password_hash',
+        'created_at'
     ];
 
     protected $hidden = ['password_hash'];

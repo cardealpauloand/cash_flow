@@ -14,6 +14,8 @@ class UserUpdateRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:120'],
+            'email' => ['sometimes', 'email', 'max:190', 'unique:users,email,' . auth('api')->id()],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'password' => ['sometimes', 'string', 'min:6'],
             // Senha atual obrigatória quando for alterar senha
             'current_password' => [

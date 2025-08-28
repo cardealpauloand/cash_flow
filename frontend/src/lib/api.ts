@@ -52,6 +52,7 @@ export interface ApiUser {
   id: number;
   name: string;
   email: string;
+  phone?: string | null;
 }
 export interface AuthResponse {
   token: string;
@@ -177,12 +178,20 @@ export const api = {
   },
   updateMe(data: {
     name?: string;
+    email?: string;
+    phone?: string | null;
     password?: string;
     current_password?: string;
   }) {
     return request<
       ApiUser,
-      { name?: string; password?: string; current_password?: string }
+      {
+        name?: string;
+        email?: string;
+        phone?: string | null;
+        password?: string;
+        current_password?: string;
+      }
     >(`/users/me`, {
       method: "PUT",
       body: data,

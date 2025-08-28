@@ -17,13 +17,13 @@ import { useApp, Currency, Language } from "@/contexts/AppContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { User, Shield, Palette, Save, CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const { currency, language, setCurrency, setLanguage, t } = useApp();
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
 
   // Estados locais para as configurações
   const [tempTheme, setTempTheme] = useState(theme);
@@ -33,11 +33,43 @@ const SettingsPage = () => {
 
   // Dados do formulário de perfil
   const [profileData, setProfileData] = useState({
-    firstName: "João",
-    lastName: "Silva",
-    email: "joao.silva@email.com",
-    phone: "+55 (11) 99999-9999",
+    name: "",
+    email: "",
+    phone: "",
   });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Carrega dados reais do usuário
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      });
+    }
+  }, [user]);
+
+  const saveProfile = async () => {
+    if (!user) return;
+    if (!profileData.name.trim()) {
+      toast.error("Nome não pode ser vazio");
+      return;
+    }
+    try {
+      setIsSavingProfile(true);
+      await updateProfile({
+        name: profileData.name.trim(),
+        email: profileData.email.trim(),
+        phone: profileData.phone.trim() || null,
+      });
+      toast.success("Perfil salvo");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar perfil");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // Estados dos switches
   const [security, setSecurity] = useState({
@@ -160,29 +192,15 @@ const SettingsPage = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">Nome</Label>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="name">Nome</Label>
                   <Input
-                    id="firstName"
-                    value={profileData.firstName}
+                    id="name"
+                    value={profileData.name}
                     onChange={(e) =>
                       setProfileData((prev) => ({
                         ...prev,
-                        firstName: e.target.value,
-                      }))
-                    }
-                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Sobrenome</Label>
-                  <Input
-                    id="lastName"
-                    value={profileData.lastName}
-                    onChange={(e) =>
-                      setProfileData((prev) => ({
-                        ...prev,
-                        lastName: e.target.value,
+                        name: e.target.value,
                       }))
                     }
                     className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
@@ -219,9 +237,13 @@ const SettingsPage = () => {
                   className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-              <Button className="w-full md:w-auto bg-gradient-primary hover:scale-105 transition-all duration-200">
+              <Button
+                className="w-full md:w-auto bg-gradient-primary hover:scale-105 transition-all duration-200"
+                onClick={saveProfile}
+                disabled={isSavingProfile}
+              >
                 <Save className="w-4 h-4 mr-2" />
-                {t("save")} Perfil
+                {isSavingProfile ? "Salvando..." : `${t("save")} Perfil`}
               </Button>
             </CardContent>
           </Card>
