@@ -175,26 +175,11 @@ export const api = {
   me() {
     return request<ApiUser>(`/users/me`);
   },
-<<<<<<< HEAD
   updateMe(data: Partial<ApiUser> & { password?: string }) {
     return request<ApiUser, Partial<ApiUser> & { password?: string }>(
       `/users/me`,
       { method: "PUT", body: data }
     );
-=======
-  updateMe(data: {
-    name?: string;
-    password?: string;
-    current_password?: string;
-  }) {
-    return request<
-      ApiUser,
-      { name?: string; password?: string; current_password?: string }
-    >(`/users/me`, {
-      method: "PUT",
-      body: data,
-    });
->>>>>>> 8be227f92ff467c3f7f8a1a4f8db1cc1360778fd
   },
   accounts: {
     list() {
@@ -264,65 +249,11 @@ export const api = {
     },
   },
   misc: {
-    categories(params?: { with_subs?: boolean }) {
-      const query = params
-        ? `?${new URLSearchParams(
-            Object.entries(params).map(([k, v]) => [k, String(v)])
-          )}`
-        : "";
-      return request<
-        Array<{
-          id: number;
-          name: string;
-          sub_categories?: Array<{
-            id: number;
-            name: string;
-            category_id: number;
-          }>;
-        }>
-      >(`/categories${query}`);
+    categories() {
+      return request<Array<{ id: number; name: string }>>("/categories");
     },
-    createCategory(data: {
-      name: string;
-      sub_categories?: Array<{ name: string }>;
-    }) {
-      return request(`/categories`, { method: "POST", body: data });
-    },
-    updateCategory(
-      id: number,
-      data: {
-        name?: string;
-        sub_categories?: Array<{ id?: number; name: string }>;
-      }
-    ) {
-      return request(`/categories/${id}`, { method: "PUT", body: data });
-    },
-    deleteCategory(id: number) {
-      return request(`/categories/${id}`, { method: "DELETE" });
-    },
-    subCategories(params?: { category_id?: number }) {
-      const query = params
-        ? `?${new URLSearchParams(
-            Object.entries(params)
-              .filter(([, v]) => v !== undefined)
-              .map(([k, v]) => [k, String(v)])
-          )}`
-        : "";
-      return request<Array<{ id: number; name: string; category_id?: number }>>(
-        `/sub-categories${query}`
-      );
-    },
-    createSubCategory(data: { name: string; category_id: number }) {
-      return request(`/sub-categories`, { method: "POST", body: data });
-    },
-    updateSubCategory(
-      id: number,
-      data: { name?: string; category_id?: number }
-    ) {
-      return request(`/sub-categories/${id}`, { method: "PUT", body: data });
-    },
-    deleteSubCategory(id: number) {
-      return request(`/sub-categories/${id}`, { method: "DELETE" });
+    subCategories() {
+      return request<Array<{ id: number; name: string }>>("/sub-categories");
     },
     tags() {
       return request<Array<{ id: number; name: string }>>("/tags");

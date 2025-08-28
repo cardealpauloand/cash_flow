@@ -5,7 +5,6 @@ import {
   PieChart,
   Settings,
   Plus,
-  FolderTree,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +30,6 @@ const navItems = [
   { icon: CreditCard, label: "accounts", href: "/accounts" },
   { icon: ArrowUpDown, label: "transactions", href: "/transactions" },
   { icon: PieChart, label: "reports", href: "/reports" },
-  { icon: FolderTree, label: "categories", href: "/categories" },
 ];
 
 export const Navigation = () => {
@@ -40,11 +38,11 @@ export const Navigation = () => {
 
   return (
     <nav className="border-b shadow-card backdrop-blur-sm navbar-bg">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+    <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-3">
-              <div className="w-[148px] h-[54px] md:w-[188px] md:h-[62px] rounded-lg overflow-hidden -ml-10">
+                <div className="w-[148px] h-[54px] md:w-[188px] md:h-[62px] rounded-lg overflow-hidden -ml-10">
                 <img
                   src="/logo.png"
                   alt="Logo"
