@@ -1,6 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { useReferenceData } from "@/contexts/ReferenceDataContext";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ interface ApiCategory {
 }
 
 export default function CategoriesPage() {
+  const navigate = useNavigate();
   const { categories, refresh, subCategories } = useReferenceData();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -52,8 +54,7 @@ export default function CategoriesPage() {
   };
 
   const startCreate = () => {
-    reset();
-    setOpen(true);
+    navigate("/categories/new");
   };
   const startEdit = async (id: number) => {
     try {

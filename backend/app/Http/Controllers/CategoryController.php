@@ -24,7 +24,7 @@ class CategoryController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:120|unique:category,name',
             'sub_categories' => 'array',
-            'sub_categories.*.name' => 'required|string|max:120',
+            'sub_categories.*.name' => 'required|string|max:120|distinct',
         ]);
         return DB::transaction(function () use ($data) {
             $cat = Category::create(['name' => $data['name']]);
@@ -50,7 +50,7 @@ class CategoryController extends Controller
             'name' => 'sometimes|required|string|max:120|unique:category,name,' . $category->id,
             'sub_categories' => 'array', // full replacement list optional
             'sub_categories.*.id' => 'sometimes|integer|exists:sub_category,id',
-            'sub_categories.*.name' => 'required_with:sub_categories|string|max:120',
+            'sub_categories.*.name' => 'required_with:sub_categories|string|max:120|distinct',
         ]);
         return DB::transaction(function () use ($data, $category) {
             if (isset($data['name'])) {

@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SubCategory;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SubCategoryController extends Controller
 {
@@ -18,8 +19,12 @@ class SubCategoryController extends Controller
 
     public function store(Request $request)
     {
+        $categoryId = $request->input('category_id');
         $data = $request->validate([
-            'name' => 'required|string|max:120|unique:sub_category,name',
+            'name' => [
+                'required', 'string', 'max:120',
+                Rule::unique('sub_category')->where(fn ($q) => $q->where('category_id', $categoryId)),
+            ],
             'category_id' => 'required|integer|exists:category,id'
         ]);
         $sub = SubCategory::create($data);
@@ -33,8 +38,14 @@ class SubCategoryController extends Controller
 
     public function update(Request $request, SubCategory $subCategory)
     {
+        $newCategoryId = $request->input('category_id', $subCategory->category_id);
         $data = $request->validate([
-            'name' => 'sometimes|required|string|max:120|unique:sub_category,name,' . $subCategory->id,
+            'name' => [
+                'sometimes', 'required', 'string', 'max:120',
+                Rule::unique('sub_category')
+                    ->ignore($subCategory->id)
+                    ->where(fn ($q) => $q->where('category_id', $newCategoryId)),
+            ],
             'category_id' => 'sometimes|required|integer|exists:category,id'
         ]);
         $subCategory->update($data);
