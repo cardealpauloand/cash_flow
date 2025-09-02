@@ -7,7 +7,7 @@ use Illuminate\Validation\Rule;
 
 class SubCategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $categoryId = $request->query('category_id');
         $q = SubCategory::query()->orderBy('name');
