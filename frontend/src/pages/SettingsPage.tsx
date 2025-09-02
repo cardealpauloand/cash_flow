@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { User, Shield, Palette, Save, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
@@ -38,6 +38,12 @@ const SettingsPage = () => {
     phone: "",
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  // Estados de troca de senha
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [pwError, setPwError] = useState<string>("");
 
   // Carrega dados reais do usuário
   useEffect(() => {
@@ -323,19 +329,72 @@ const SettingsPage = () => {
                 <Input
                   type="password"
                   placeholder="Senha atual"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
                   className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
                 <Input
                   type="password"
                   placeholder="Nova senha"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  type="password"
+                  placeholder="Confirmar nova senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              {pwError && (
+                <p className="text-sm text-destructive">{pwError}</p>
+              )}
               <Button
+                type="button"
                 variant="outline"
                 className="w-full md:w-auto hover:bg-primary/10 transition-all duration-200"
+                onClick={async () => {
+                  setPwError("");
+                  if (!currentPassword) {
+                    const msg = "Informe a senha atual.";
+                    setPwError(msg);
+                    toast.error(msg);
+                    return;
+                  }
+                  if (!newPassword || newPassword.length < 6) {
+                    const msg = "A nova senha deve ter pelo menos 6 caracteres.";
+                    setPwError(msg);
+                    toast.error(msg);
+                    return;
+                  }
+                  if (newPassword !== confirmPassword) {
+                    const msg = "As senhas não conferem.";
+                    setPwError(msg);
+                    toast.error(msg);
+                    return;
+                  }
+                  try {
+                    setIsSavingPassword(true);
+                    await api.updateMe({ password: newPassword, current_password: currentPassword });
+                    toast.success("Senha alterada com sucesso.");
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                  } catch (e) {
+                    const err = e as Error;
+                    setPwError(err.message || "Erro ao alterar a senha.");
+                    toast.error(err.message || "Erro ao alterar a senha.");
+                  } finally {
+                    setIsSavingPassword(false);
+                  }
+                }}
+                disabled={isSavingPassword}
               >
-                Alterar Senha
+                {isSavingPassword ? "Salvando..." : "Alterar Senha"}
               </Button>
             </div>
             <Separator />

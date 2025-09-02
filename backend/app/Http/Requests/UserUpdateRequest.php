@@ -2,6 +2,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Hash;
 
 class UserUpdateRequest extends FormRequest
 {
@@ -27,6 +28,14 @@ class UserUpdateRequest extends FormRequest
                     }
                 }
             ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'current_password.required_with' => 'Informe a senha atual para alterar a senha.',
+            'password.min' => 'A nova senha deve ter pelo menos :min caracteres.',
         ];
     }
 }

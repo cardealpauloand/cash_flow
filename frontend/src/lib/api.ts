@@ -39,9 +39,17 @@ async function request<T = unknown, B = unknown>(
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // Try to extract standardized message field
-    const message =
-      (data && (data.message || data.error)) || `Erro ${res.status}`;
+    // Try to extract standardized message field (Laravel validation aware)
+    let message = (data && (data.message || data.error)) as string | undefined;
+    if (!message && data && typeof data === 'object' && 'errors' in data) {
+      try {
+        const errors = (data as any).errors;
+        const firstKey = Object.keys(errors || {})[0];
+        const firstMsg = firstKey && Array.isArray(errors[firstKey]) ? errors[firstKey][0] : undefined;
+        if (firstMsg) message = String(firstMsg);
+      } catch {}
+    }
+    if (!message) message = `Erro ${res.status}`;
     throw new Error(message);
   }
   return data as T;

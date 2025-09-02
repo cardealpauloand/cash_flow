@@ -20,7 +20,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { api } from "@/lib/api";
 
 const ProfilePage = () => {
@@ -40,6 +40,7 @@ const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [pwError, setPwError] = useState<string>("");
 
   const handleSave = () => {
     // Aqui você salvaria os dados do perfil
@@ -306,24 +307,41 @@ const ProfilePage = () => {
                   />
                 </div>
               </div>
+              {pwError && (
+                <p className="text-sm text-destructive mt-2">{pwError}</p>
+              )}
               <div className="mt-4">
                 <Button
+                  type="button"
                   onClick={async () => {
+                    setPwError("");
+                    if (!passwords.current) {
+                      const msg = "Informe a senha atual.";
+                      setPwError(msg);
+                      toast.error(msg);
+                      return;
+                    }
                     if (!passwords.next || passwords.next.length < 6) {
-                      toast.error("A nova senha deve ter pelo menos 6 caracteres.");
+                      const msg = "A nova senha deve ter pelo menos 6 caracteres.";
+                      setPwError(msg);
+                      toast.error(msg);
                       return;
                     }
                     if (passwords.next !== passwords.confirm) {
-                      toast.error("As senhas não conferem.");
+                      const msg = "As senhas não conferem.";
+                      setPwError(msg);
+                      toast.error(msg);
                       return;
                     }
                     try {
                       setIsSavingPassword(true);
-                      await api.updateMe({ password: passwords.next });
+                      await api.updateMe({ password: passwords.next, current_password: passwords.current });
                       toast.success("Senha alterada com sucesso.");
                       setPasswords({ current: "", next: "", confirm: "" });
+                      setPwError("");
                     } catch (e) {
                       const err = e as Error;
+                      setPwError(err.message || "Erro ao alterar a senha.");
                       toast.error(err.message || "Erro ao alterar a senha.");
                     } finally {
                       setIsSavingPassword(false);
