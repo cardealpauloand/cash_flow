@@ -83,6 +83,7 @@ const TransactionsPage = () => {
   const [deletingTx, setDeletingTx] = useState<InstallmentListItem | null>(
     null
   );
+  const [newTxType, setNewTxType] = useState<"income" | "expense" | "transfer" | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [accountFilter, setAccountFilter] = useState<number | undefined>();
@@ -154,6 +155,7 @@ const TransactionsPage = () => {
       });
       toast({ title: "Transação criada" });
       setIsModalOpen(false);
+  setNewTxType(null);
     } catch (e) {
       const err = e as Error;
       toast({
@@ -225,6 +227,8 @@ const TransactionsPage = () => {
     setDeletingTx(null);
   };
 
+  // (removed) auto-open by URL; now handled by dropdown on New Transaction button
+
   return (
     <Layout>
       <div className="space-y-8 animate-fade-in">
@@ -237,16 +241,39 @@ const TransactionsPage = () => {
               Histórico completo de movimentações
             </p>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-income hover:scale-105 transition-all duration-200 shadow-card">
-                <Plus size={16} className="mr-2" />
-                {t("newTransaction")}
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-gradient-income hover:scale-105 transition-all duration-200 shadow-card">
+                  <Plus size={16} className="mr-2" />
+                  {t("newTransaction")}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" sideOffset={6}>
+                <DropdownMenuItem onClick={() => { setNewTxType("expense"); setIsModalOpen(true); }}>
+                  {t("expense")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setNewTxType("transfer"); setIsModalOpen(true); }}>
+                  {t("transfer")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setNewTxType("income"); setIsModalOpen(true); }}>
+                  {t("income")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <Dialog open={isModalOpen} onOpenChange={(open) => {
+            setIsModalOpen(open);
+            if (!open) setNewTxType(null);
+          }}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{t("newTransaction")}</DialogTitle>
+                <DialogTitle>
+                  {newTxType === "income" && "Nova Receita"}
+                  {newTxType === "expense" && "Nova Despesa"}
+                  {newTxType === "transfer" && "Nova Transferência"}
+                  {!newTxType && t("newTransaction")}
+                </DialogTitle>
                 <DialogDescription>
                   Preencha os dados da nova transação.
                 </DialogDescription>
@@ -254,6 +281,9 @@ const TransactionsPage = () => {
               <TransactionForm
                 onSubmit={handleNewTransaction}
                 onCancel={() => setIsModalOpen(false)}
+                initialData={newTxType ? { type: newTxType, amount: 0, description: "", account: "", date: new Date().toISOString().slice(0,10) } as any : undefined}
+                forcedType={newTxType ?? undefined}
+                titleOverride={newTxType === "income" ? "Nova Receita" : newTxType === "expense" ? "Nova Despesa" : newTxType === "transfer" ? "Nova Transferência" : undefined}
               />
             </DialogContent>
           </Dialog>

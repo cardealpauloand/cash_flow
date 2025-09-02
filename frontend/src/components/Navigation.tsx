@@ -1,29 +1,11 @@
-import {
-  Home,
-  CreditCard,
-  ArrowUpDown,
-  PieChart,
-  Settings,
-  Plus,
-} from "lucide-react";
+import { Home, CreditCard, ArrowUpDown, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/contexts/AppContext";
 import { UserMenu } from "@/components/auth/UserMenu";
-import TransactionForm, {
-  TransactionFormSubmitPayload,
-} from "@/components/forms/TransactionForm";
-import { useState } from "react";
+import { useCallback } from "react";
 
 const navItems = [
   { icon: Home, label: "dashboard", href: "/" },
@@ -35,6 +17,7 @@ const navItems = [
 export const Navigation = () => {
   const location = useLocation();
   const { t } = useApp();
+  
 
   return (
     <nav className="border-b shadow-card backdrop-blur-sm navbar-bg">

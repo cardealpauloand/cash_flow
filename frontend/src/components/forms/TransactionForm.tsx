@@ -68,6 +68,8 @@ interface TransactionFormProps {
   onCancel: () => void;
   initialData?: TransactionFormSubmitPayload;
   isEditing?: boolean;
+  forcedType?: "income" | "expense" | "transfer";
+  titleOverride?: string;
 }
 
 const TransactionForm = ({
@@ -75,6 +77,8 @@ const TransactionForm = ({
   onCancel,
   initialData,
   isEditing = false,
+  forcedType,
+  titleOverride,
 }: TransactionFormProps) => {
   // Remover formData consolidado e usar Unform
   const formRef = useRef<FormHandles>(null);
@@ -99,12 +103,12 @@ const TransactionForm = ({
     staleTime: 30_000,
   });
   const [formError, setFormError] = useState<string>("");
-  const [isTransfer, setIsTransfer] = useState<boolean>(false);
+  const [isTransfer, setIsTransfer] = useState<boolean>(forcedType === "transfer");
 
   useEffect(() => {
-    if (initialData) {
+  if (initialData) {
       formRef.current?.setData({
-        type: initialData.type || "",
+    type: initialData.type || forcedType || "",
         description: initialData.description || "",
         amount: initialData.amount?.toString() || "",
         category: initialData.category || "",
@@ -112,9 +116,9 @@ const TransactionForm = ({
         account_out_id: initialData.account_out_id || "",
       });
       // Ajusta UI para mostrar campos específicos quando for transferência
-      setIsTransfer(initialData.type === "transfer");
+    setIsTransfer((forcedType || initialData.type) === "transfer");
     }
-  }, [initialData]);
+  }, [initialData, forcedType]);
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -135,9 +139,10 @@ const TransactionForm = ({
   account_out_id?: string;
     }) => {
       setFormError("");
+      const typeToUse = (forcedType || data.type) as "income" | "expense" | "transfer";
       // Amount precedence: for transfers always use the typed amount; for income/expense, if subs exist, sum them
       let finalAmount: number = parseFloat(data.amount);
-      if (data.type !== "transfer" && subCategories.length > 0) {
+      if (typeToUse !== "transfer" && subCategories.length > 0) {
         finalAmount = subCategories.reduce((sum, s) => sum + s.value, 0);
       }
       if (!isFinite(finalAmount) || finalAmount <= 0) {
@@ -146,7 +151,7 @@ const TransactionForm = ({
       }
 
       // Validação cliente: impedir transferir acima do saldo disponível da conta de origem
-      if (data.type === "transfer") {
+      if (typeToUse === "transfer") {
         const originId = Number(data.account_out_id);
         const originBalance = dashboard?.accounts?.find((a) => a.id === originId)?.balance ?? 0;
         if (finalAmount > originBalance) {
@@ -162,7 +167,7 @@ const TransactionForm = ({
 
       const payload: TransactionFormSubmitPayload = {
         ...(initialData?.id && { id: initialData.id }),
-        type: data.type,
+        type: typeToUse,
         description: data.description,
         amount: finalAmount,
         category: data.category || undefined,
@@ -187,6 +192,7 @@ const TransactionForm = ({
       installmentsEnabled,
       installmentsCount,
   dashboard,
+      forcedType,
     ]
   );
 
@@ -194,7 +200,7 @@ const TransactionForm = ({
     <Card className="shadow-card">
       <CardHeader>
         <CardTitle>
-          {isEditing ? "Editar Transação" : "Nova Transação"}
+          {titleOverride || (isEditing ? "Editar Transação" : "Nova Transação")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -206,28 +212,41 @@ const TransactionForm = ({
           onPointerLeaveCapture={() => {}}
           placeholder=""
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UnformSelect
-              name="type"
-              label="Tipo"
-              required
-              placeholder="Selecione o tipo"
-              onChangeValue={(v) => setIsTransfer(v === "transfer")}
-              defaultValue={initialData?.type}
-            >
-              <SelectItem value="income">Receita</SelectItem>
-              <SelectItem value="expense">Despesa</SelectItem>
-              <SelectItem value="transfer">Transferência</SelectItem>
-            </UnformSelect>
-            <UnformInput
-              name="amount"
-              label="Valor"
-              type="number"
-              step="0.01"
-              placeholder="0,00"
-              required
-            />
-          </div>
+          {forcedType ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UnformInput
+                name="amount"
+                label="Valor"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                required
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <UnformSelect
+                name="type"
+                label="Tipo"
+                required
+                placeholder="Selecione o tipo"
+                onChangeValue={(v) => setIsTransfer(v === "transfer")}
+                defaultValue={initialData?.type}
+              >
+                <SelectItem value="income">Receita</SelectItem>
+                <SelectItem value="expense">Despesa</SelectItem>
+                <SelectItem value="transfer">Transferência</SelectItem>
+              </UnformSelect>
+              <UnformInput
+                name="amount"
+                label="Valor"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                required
+              />
+            </div>
+          )}
 
           <UnformInput
             name="description"
@@ -250,9 +269,9 @@ const TransactionForm = ({
             </UnformSelect>
             <UnformSelect
               name="account"
-              label="Conta (destino)"
+              label={isTransfer ? "Conta (destino)" : "Conta"}
               required
-              placeholder="Selecione a conta de destino"
+              placeholder={isTransfer ? "Selecione a conta de destino" : "Selecione a conta"}
               defaultValue={initialData?.account}
             >
               {accounts.list.data?.map((acc) => (
