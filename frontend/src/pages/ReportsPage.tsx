@@ -29,6 +29,7 @@ import {
   BarChart,
   Bar,
   Pie,
+  ReferenceLine,
 } from "recharts";
 import { useApp } from "@/contexts/AppContext";
 import { useState, useMemo } from "react";
@@ -42,19 +43,28 @@ const ReportsPage = () => {
   const [period, setPeriod] = useState<"1m" | "3m" | "6m" | "1y">("6m");
 
   const { dateFrom, dateTo } = useMemo(() => {
-    const end = new Date();
-    const start = new Date();
-    if (period === "1m") start.setMonth(start.getMonth() - 0); // current month
-    if (period === "3m") start.setMonth(start.getMonth() - 2);
-    if (period === "6m") start.setMonth(start.getMonth() - 5);
-    if (period === "1y") start.setFullYear(start.getFullYear() - 1);
-    // Normalize to first day of month for start
-    start.setDate(1);
-    const date_from = start.toISOString().slice(0, 10);
-    const date_to = new Date(end.getFullYear(), end.getMonth() + 1, 0)
-      .toISOString()
-      .slice(0, 10);
-    return { dateFrom: date_from, dateTo: date_to };
+    const now = new Date();
+    // Helper to format YYYY-MM-DD in local time (avoids UTC shift bugs)
+    const fmt = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+
+    let start = new Date(now.getFullYear(), now.getMonth(), 1);
+    let end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // end of current month
+
+  if (period === "3m") {
+      start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      // end remains end of current month
+    } else if (period === "6m") {
+      start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    } else if (period === "1y") {
+      start = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+    }
+
+    return { dateFrom: fmt(start), dateTo: fmt(end) };
   }, [period]);
 
   const query = useQuery<
@@ -69,8 +79,33 @@ const ReportsPage = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Separate 6-month trend for the line chart so it isn't static on 1m
+  const { trendFrom, trendTo } = useMemo(() => {
+    const now = new Date();
+    const fmt = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+    const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { trendFrom: fmt(start), trendTo: fmt(end) };
+  }, []);
+
+  const trendQuery = useQuery<
+    ReportsSummary,
+    Error,
+    ReportsSummary,
+    [string, string, string, string, string]
+  >({
+    queryKey: ["reports", "summary", "trend", trendFrom, trendTo],
+    queryFn: () => api.reports.summary({ date_from: trendFrom, date_to: trendTo }),
+    refetchOnWindowFocus: false,
+  });
+
   const data = query.data;
-  const monthlyData = (data?.monthly || []).map((m) => {
+  const monthlyData = (trendQuery.data?.monthly || []).map((m) => {
     const [year, mon] = m.month.split("-");
     const date = new Date(Number(year), Number(mon) - 1, 1);
     const label = date.toLocaleDateString("pt-BR", { month: "short" });
@@ -86,9 +121,56 @@ const ReportsPage = () => {
     value: c.value,
   }));
 
+  // Neon palette for pie slices (vivid, high-contrast colors)
+  const neonPalette = [
+    "#00E5FF", // neon cyan
+    "#7C4DFF", // neon purple
+    "#00FF95", // neon mint
+    "#FF3D81", // neon pink
+    "#FFD600", // neon yellow
+    "#29FFEA", // neon aqua
+    "#FF6F00", // neon orange
+    "#A0FF00", // neon lime
+    "#FF00E5", // neon magenta
+    "#00C3FF", // bright azure
+  ];
+
   const totalReceitas = data?.totals.income || 0;
   const totalDespesas = data?.totals.expenses || 0;
   const saldoLiquido = data?.totals.net || 0;
+
+  // Render pie labels outside with matching slice color (no glow)
+  const RADIAN = Math.PI / 180;
+  const renderPieLabel = (props: any) => {
+    const { cx, cy, midAngle, outerRadius, percent, index, name, value } = props;
+    // Guard: render nothing for invalid/empty values
+    if (
+      !Number.isFinite(cx) ||
+      !Number.isFinite(cy) ||
+      !Number.isFinite(outerRadius) ||
+      !Number.isFinite(midAngle) ||
+      !Number.isFinite(percent) ||
+      !value
+    ) {
+      return null;
+    }
+    const radius = outerRadius + 18;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const color = neonPalette[index % neonPalette.length];
+    return (
+      <text
+        x={x}
+        y={y}
+        fill={color}
+        textAnchor={x > cx ? "start" : "end"}
+        dominantBaseline="central"
+        style={{ filter: "none" }}
+      >
+        {`${name} ${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
 
   return (
     <Layout>
@@ -190,7 +272,7 @@ const ReportsPage = () => {
               <CardTitle className="flex items-center space-x-2">
                 <BarChart3 className="w-5 h-5" />
                 <span>Evolução Mensal</span>
-                {query.isFetching && (
+                {(query.isFetching || trendQuery.isFetching) && (
                   <span className="text-xs text-muted-foreground">
                     Atualizando...
                   </span>
@@ -198,46 +280,28 @@ const ReportsPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    className="stroke-muted"
-                  />
-                  <XAxis dataKey="month" className="text-muted-foreground" />
-                  <YAxis
-                    className="text-muted-foreground"
-                    tickFormatter={(v) => `R$ ${v}`}
-                  />
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={monthlyData} margin={{ top: 16, right: 24, bottom: 32, left: 56 }}>
+                  <defs>
+                    <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="month" className="text-muted-foreground" tickMargin={12} tickLine={false} axisLine={false} />
+                  <YAxis className="text-muted-foreground" tickFormatter={(v) => `R$ ${v}`} tickMargin={8} width={64} tickLine={false} axisLine={false} />
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="receitas"
-                    stroke="hsl(var(--income))"
-                    strokeWidth={2}
-                    name="Receitas"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="despesas"
-                    stroke="hsl(var(--expense))"
-                    strokeWidth={2}
-                    name="Despesas"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="liquido"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    name="Saldo Líquido"
-                  />
+                  <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+                  <Line type="monotone" dataKey="receitas" stroke="hsl(var(--income))" strokeWidth={2.5} dot={{ r: 2, stroke: "transparent" }} activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }} style={{ filter: "url(#lineGlow)" }} name="Receitas" />
+                  <Line type="monotone" dataKey="despesas" stroke="hsl(var(--expense))" strokeWidth={2.5} dot={{ r: 2, stroke: "transparent" }} activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }} style={{ filter: "url(#lineGlow)" }} name="Despesas" />
+                  <Line type="monotone" dataKey="liquido" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 2, stroke: "transparent" }} activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }} style={{ filter: "url(#lineGlow)" }} name="Saldo Líquido" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -253,21 +317,34 @@ const ReportsPage = () => {
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <RechartsPieChart>
+                  {/* Neon glow filter for pie slices */}
+                  <defs>
+                    <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+
                   <Pie
                     data={categoryData}
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
                     fill="#8884d8"
+                    stroke="none"
+                    strokeWidth={0}
                     dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
+                    label={categoryData.length ? renderPieLabel : false}
+                    labelLine
                   >
-                    {categoryData.map((entry, index) => (
+          {categoryData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={`hsl(var(--expense))`}
+            fill={neonPalette[index % neonPalette.length]}
+            style={{ filter: "url(#neonGlow)" }}
                       />
                     ))}
                   </Pie>
@@ -286,13 +363,19 @@ const ReportsPage = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {categoryData.map((cat) => (
+              {categoryData.map((cat, idx) => (
                 <div
                   key={cat.name}
                   className="flex items-center justify-between p-4 rounded-lg bg-muted/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full bg-expense" />
+                    <div
+                      className="w-4 h-4 rounded-full"
+                      style={{
+                        backgroundColor: neonPalette[idx % neonPalette.length],
+                        boxShadow: `${neonPalette[idx % neonPalette.length]}80 0px 0px 8px`,
+                      }}
+                    />
                     <span className="font-medium">{cat.name}</span>
                   </div>
                   <div className="text-right">
