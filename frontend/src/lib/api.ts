@@ -80,6 +80,11 @@ export interface Paginated<T> {
   data: T[];
   current_page: number;
   last_page: number;
+  // Optional fields commonly returned by Laravel's paginator
+  total?: number;
+  per_page?: number | string;
+  from?: number | null;
+  to?: number | null;
 }
 // Agora a listagem baseia-se em parcelas (installments)
 export interface InstallmentListItem {
@@ -209,6 +214,10 @@ export const api = {
     list() {
       return request<AccountResponse[]>(`/accounts`);
     },
+    count() {
+      return request<{ count: number }>(`/accounts`)
+        .then((list) => ({ count: Array.isArray(list as any) ? (list as any).length : 0 } as any));
+    },
     create(data: AccountPayload) {
       return request<AccountResponse, AccountPayload>(`/accounts`, {
         method: "POST",
@@ -254,6 +263,10 @@ export const api = {
       return request<{ deleted: boolean }>(`/transactions/${id}`, {
         method: "DELETE",
       });
+    },
+    count(params?: { date_from?: string; date_to?: string }) {
+      const query = params ? `?${new URLSearchParams(params as any)}` : "";
+      return request<{ count: number }>(`/transactions/count${query}`);
     },
   },
   dashboard: {

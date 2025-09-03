@@ -8,6 +8,15 @@ use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
+    public function count(Request $request)
+    {
+        // Conta transações raiz do usuário autenticado (não parcelas)
+        $userId = auth('api')->id();
+        $q = Transaction::query()->where('user_id', $userId);
+        if ($request->filled('date_from')) $q->whereDate('date', '>=', $request->date_from);
+        if ($request->filled('date_to')) $q->whereDate('date', '<=', $request->date_to);
+        return response()->json(['count' => $q->count()]);
+    }
     public function index(Request $request)
     {
         // Nova listagem baseada em parcels (transactions_installments)

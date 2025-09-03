@@ -19,19 +19,20 @@ import {
   Shield,
   CheckCircle
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/sonner";
 import { api } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { t } = useApp();
 
   // Estados do formulário
   const [profileData, setProfileData] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    phone: "+55 (11) 99999-9999",
+    phone: user?.phone || "",
     dateOfBirth: "1990-01-01",
     location: "São Paulo, SP",
     bio: "Entusiasta de finanças pessoais e investimentos."
@@ -41,14 +42,66 @@ const ProfilePage = () => {
   const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [pwError, setPwError] = useState<string>("");
+  // Real counts
+  const { data: accountsList } = useQuery({ queryKey: ["accounts"], queryFn: () => api.accounts.list() });
+  const accountsCount = accountsList?.length || 0;
+  const { data: txCountRes } = useQuery({ queryKey: ["transactions", "count"], queryFn: () => api.transactions.count() });
+  const transactionsCount = txCountRes?.count || 0;
 
-  const handleSave = () => {
-    // Aqui você salvaria os dados do perfil
-    toast.success("Perfil atualizado com sucesso!", {
-      description: "Suas informações foram salvas.",
-      duration: 3000,
-    });
-    setIsEditing(false);
+  // Carrega extras do perfil do localStorage e sincroniza com usuário
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("cashflow-profile-extras");
+      const extras = raw ? JSON.parse(raw) : {};
+      setProfileData((prev) => ({
+        ...prev,
+        // dados do usuário vindos do backend
+        name: user?.name || "",
+        email: user?.email || "",
+        phone: user?.phone || "",
+        // extras locais
+        dateOfBirth: extras.dateOfBirth || prev.dateOfBirth,
+        location: extras.location || prev.location,
+        bio: extras.bio || prev.bio,
+      }));
+    } catch {
+      // ignore JSON error
+      setProfileData((prev) => ({
+        ...prev,
+        name: user?.name || "",
+        email: user?.email || "",
+        phone: user?.phone || "",
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.name, user?.email, user?.phone]);
+
+  const handleSave = async () => {
+    // Persiste no backend os campos suportados (nome, email, telefone)
+    try {
+      await updateProfile({
+        name: profileData.name.trim(),
+        email: profileData.email.trim(),
+        phone: profileData.phone.trim() || null,
+      });
+      // Persiste extras localmente
+      localStorage.setItem(
+        "cashflow-profile-extras",
+        JSON.stringify({
+          dateOfBirth: profileData.dateOfBirth,
+          location: profileData.location,
+          bio: profileData.bio,
+        })
+      );
+      toast.success("Perfil atualizado com sucesso!", {
+        description: "Suas informações foram salvas.",
+        duration: 3000,
+      });
+      setIsEditing(false);
+    } catch (e) {
+      const err = e as Error;
+      toast.error(err.message || "Erro ao atualizar o perfil.");
+    }
   };
 
   const getInitials = (name: string) => {
@@ -106,13 +159,13 @@ const ProfilePage = () => {
                   {profileData.bio}
                 </p>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4 mt-4 text-center">
+        <div className="grid grid-cols-2 gap-4 mt-4 text-center">
                   <div>
-                    <p className="text-2xl font-bold text-foreground">12</p>
+          <p className="text-2xl font-bold text-foreground">{accountsCount}</p>
                     <p className="text-xs text-muted-foreground">Contas</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">247</p>
+          <p className="text-2xl font-bold text-foreground">{transactionsCount}</p>
                     <p className="text-xs text-muted-foreground">Transações</p>
                   </div>
                 </div>
