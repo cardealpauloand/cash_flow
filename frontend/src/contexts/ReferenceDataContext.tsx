@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export interface ReferenceDataContextValue {
   categories: Array<{ id: number; name: string }>;
-  subCategories: Array<{ id: number; name: string }>;
+  subCategories: Array<{ id: number; name: string; category_id?: number | null }>;
   tags: Array<{ id: number; name: string }>;
   refresh: () => Promise<void>;
   loading: boolean;

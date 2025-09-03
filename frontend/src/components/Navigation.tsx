@@ -1,16 +1,24 @@
-import { Home, CreditCard, ArrowUpDown, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Home,
+  CreditCard,
+  ArrowUpDown,
+  PieChart,
+  Plus,
+  FolderTree,
+} from "lucide-react";
+
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/contexts/AppContext";
 import { UserMenu } from "@/components/auth/UserMenu";
-import { useCallback } from "react";
 
 const navItems = [
   { icon: Home, label: "dashboard", href: "/" },
   { icon: CreditCard, label: "accounts", href: "/accounts" },
   { icon: ArrowUpDown, label: "transactions", href: "/transactions" },
+  { icon: FolderTree, label: "categories", href: "/categories" },
   { icon: PieChart, label: "reports", href: "/reports" },
 ];
 
@@ -21,11 +29,11 @@ export const Navigation = () => {
 
   return (
     <nav className="border-b shadow-card backdrop-blur-sm navbar-bg">
-    <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-3">
-                <div className="w-[148px] h-[54px] md:w-[188px] md:h-[62px] rounded-lg overflow-hidden -ml-10">
+              <div className="w-[148px] h-[54px] md:w-[188px] md:h-[62px] rounded-lg overflow-hidden -ml-10">
                 <img
                   src="/logo.png"
                   alt="Logo"

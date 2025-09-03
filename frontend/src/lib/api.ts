@@ -286,11 +286,46 @@ export const api = {
     },
   },
   misc: {
-    categories() {
-      return request<Array<{ id: number; name: string }>>("/categories");
+    categories(params?: Record<string, string | number | boolean>) {
+      const query = params
+        ? `?${new URLSearchParams(
+            Object.entries(params).map(([k, v]) => [k, String(v)]) as [
+              string,
+              string
+            ][]
+          )}`
+        : "";
+      return request<Array<{ id: number; name: string }>>(
+        `/categories${query}`
+      );
+    },
+    createCategory(data: {
+      name: string;
+      sub_categories?: Array<{ id?: number; name: string }>;
+    }) {
+      return request<
+        { id: number; name: string },
+        { name: string; sub_categories?: Array<{ id?: number; name: string }> }
+      >(`/categories`, { method: "POST", body: data });
+    },
+    updateCategory(
+      id: number,
+      data: { name?: string; sub_categories?: Array<{ id?: number; name: string }> }
+    ) {
+      return request<
+        { id: number; name: string },
+        { name?: string; sub_categories?: Array<{ id?: number; name: string }> }
+      >(`/categories/${id}`, { method: "PUT", body: data });
+    },
+    deleteCategory(id: number) {
+      return request<{ deleted: boolean }>(`/categories/${id}`, {
+        method: "DELETE",
+      });
     },
     subCategories() {
-      return request<Array<{ id: number; name: string }>>("/sub-categories");
+      return request<Array<{ id: number; name: string; category_id?: number | null }>>(
+        "/sub-categories"
+      );
     },
     tags() {
       return request<Array<{ id: number; name: string }>>("/tags");

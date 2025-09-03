@@ -2,10 +2,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\SubCategory;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $withSubs = filter_var($request->query('with_subs', true), FILTER_VALIDATE_BOOLEAN);
         $q = Category::query()->orderBy('name');
