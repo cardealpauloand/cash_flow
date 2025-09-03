@@ -139,10 +139,19 @@ const TransactionForm = ({
   account_out_id?: string;
     }) => {
       setFormError("");
-      const typeToUse = (forcedType || data.type) as "income" | "expense" | "transfer";
-      // Amount precedence: for transfers always use the typed amount; for income/expense, if subs exist, sum them
+      const typeToUse = (
+        isTransfer
+          ? "transfer"
+          : ((forcedType || data.type || initialData?.type) as
+              | "income"
+              | "expense"
+              | "transfer")
+      );
+      // Amount precedence
+      // - In edit mode: use typed amount only (ignore subs)
+      // - In create mode: for non-transfer with subs, sum subs
       let finalAmount: number = parseFloat(data.amount);
-      if (typeToUse !== "transfer" && subCategories.length > 0) {
+      if (!isEditing && typeToUse !== "transfer" && subCategories.length > 0) {
         finalAmount = subCategories.reduce((sum, s) => sum + s.value, 0);
       }
       if (!isFinite(finalAmount) || finalAmount <= 0) {
@@ -168,7 +177,8 @@ const TransactionForm = ({
       const payload: TransactionFormSubmitPayload = {
         ...(initialData?.id && { id: initialData.id }),
         type: typeToUse,
-        description: data.description,
+        // Preserve existing description when field is hidden in edit mode
+        description: data.description ?? initialData?.description ?? "",
         amount: finalAmount,
         category: data.category || undefined,
         account: data.account,
@@ -212,240 +222,315 @@ const TransactionForm = ({
           onPointerLeaveCapture={() => {}}
           placeholder=""
         >
-          {forcedType ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UnformInput
-                name="amount"
-                label="Valor"
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                required
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <UnformSelect
-                name="type"
-                label="Tipo"
-                required
-                placeholder="Selecione o tipo"
-                onChangeValue={(v) => setIsTransfer(v === "transfer")}
-                defaultValue={initialData?.type}
-              >
-                <SelectItem value="income">Receita</SelectItem>
-                <SelectItem value="expense">Despesa</SelectItem>
-                <SelectItem value="transfer">Transferência</SelectItem>
-              </UnformSelect>
-              <UnformInput
-                name="amount"
-                label="Valor"
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                required
-              />
-            </div>
-          )}
-
-          <UnformInput
-            name="description"
-            label="Descrição"
-            placeholder="Descreva a transação"
-            required
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UnformSelect
-              name="category"
-              label="Categoria"
-              placeholder="Selecione a categoria ou subcategoria"
-            >
-              {ref.categories.map((c) => (
-                <Fragment key={`grp-${c.id}`}>
-                  <SelectItem key={`c-${c.id}`} value={`c:${c.id}`}>
-                    {c.name}
-                  </SelectItem>
-                  {ref.subCategories
-                    .filter((s) => s.category_id === c.id)
-                    .map((s) => (
-                      <SelectItem
-                        key={`s-${c.id}-${s.id}`}
-                        value={`s:${c.id}:${s.id}`}
-                      >
-                        {c.name} → {s.name}
+          {(() => {
+            const showOnlyFour = isTransfer && (isEditing || forcedType === "transfer");
+            if (showOnlyFour) {
+              return (
+                <div className="space-y-4">
+                  <UnformInput
+                    name="amount"
+                    label="Valor"
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    required
+                  />
+                  <UnformSelect
+                    name="category"
+                    label="Categoria"
+                    placeholder="Selecione a categoria ou subcategoria"
+                  >
+                    {ref.categories.map((c) => (
+                      <Fragment key={`grp-${c.id}`}>
+                        <SelectItem key={`c-${c.id}`} value={`c:${c.id}`}>
+                          {c.name}
+                        </SelectItem>
+                        {ref.subCategories
+                          .filter((s) => s.category_id === c.id)
+                          .map((s) => (
+                            <SelectItem
+                              key={`s-${c.id}-${s.id}`}
+                              value={`s:${c.id}:${s.id}`}
+                            >
+                              {c.name} → {s.name}
+                            </SelectItem>
+                          ))}
+                      </Fragment>
+                    ))}
+                  </UnformSelect>
+                  <UnformSelect
+                    name="account_out_id"
+                    label="Conta de origem"
+                    required
+                    placeholder="Selecione a conta de origem"
+                    defaultValue={initialData?.account_out_id}
+                  >
+                    {accounts.list.data?.map((acc) => (
+                      <SelectItem key={acc.id} value={String(acc.id)}>
+                        {acc.name}
                       </SelectItem>
                     ))}
-                </Fragment>
-              ))}
-            </UnformSelect>
-            <UnformSelect
-              name="account"
-              label={isTransfer ? "Conta (destino)" : "Conta"}
-              required
-              placeholder={isTransfer ? "Selecione a conta de destino" : "Selecione a conta"}
-              defaultValue={initialData?.account}
-            >
-              {accounts.list.data?.map((acc) => (
-                <SelectItem key={acc.id} value={String(acc.id)}>
-                  {acc.name}
-                </SelectItem>
-              ))}
-            </UnformSelect>
-            {isTransfer && (
-              <UnformSelect
-                name="account_out_id"
-                label="Conta de origem"
-                required
-                placeholder="Selecione a conta de origem"
-                defaultValue={initialData?.account_out_id}
-              >
-                {accounts.list.data?.map((acc) => (
-                  <SelectItem key={acc.id} value={String(acc.id)}>
-                    {acc.name}
-                  </SelectItem>
-                ))}
-              </UnformSelect>
-            )}
-          </div>
-
-          {isTransfer && (
-            <div className="text-xs text-muted-foreground">
-              {(() => {
-                const oid = Number(
-                  (formRef.current?.getFieldValue("account_out_id") as string) || ""
-                );
-                const bal = dashboard?.accounts?.find((a) => a.id === oid)?.balance;
-                return bal !== undefined
-                  ? `Saldo na origem: ${bal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
-                  : null;
-              })()}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Data</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date
-                    ? format(date, "PPP", { locale: ptBR })
-                    : "Selecione a data"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(d) => d && setDate(d)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {formError && (
-            <div className="text-sm text-destructive">{formError}</div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
-            <div className="flex space-x-2">
-              <Input
-                id="tags"
-                placeholder="Adicionar tag"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) =>
-                  e.key === "Enter" && (e.preventDefault(), handleAddTag())
-                }
-              />
-              <Button
-                type="button"
-                onClick={handleAddTag}
-                size="icon"
-                variant="outline"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {tags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="flex items-center space-x-1"
+                  </UnformSelect>
+                  <UnformSelect
+                    name="account"
+                    label="Conta de destino"
+                    required
+                    placeholder="Selecione a conta de destino"
+                    defaultValue={initialData?.account}
                   >
-                    <span>{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <SubCategoryManager
-            subCategories={subCategories}
-            onSubCategoriesChange={setSubCategories}
-            totalValue={
-              parseFloat(
-                (formRef.current?.getFieldValue("amount") as string) || "0"
-              ) || 0
+                    {accounts.list.data?.map((acc) => (
+                      <SelectItem key={acc.id} value={String(acc.id)}>
+                        {acc.name}
+                      </SelectItem>
+                    ))}
+                  </UnformSelect>
+                  {formError && (
+                    <div className="text-sm text-destructive">{formError}</div>
+                  )}
+                </div>
+              );
             }
-          />
-
-          <div className="space-y-2 p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <input
-                id="enableInstallments"
-                type="checkbox"
-                className="h-4 w-4"
-                checked={installmentsEnabled}
-                onChange={(e) => setInstallmentsEnabled(e.target.checked)}
-                disabled={isTransfer}
-              />
-              <Label htmlFor="enableInstallments" className="cursor-pointer">
-                Parcelar (backend divide valor igualmente)
-              </Label>
-            </div>
-            {installmentsEnabled && !isTransfer && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1 sm:col-span-1">
-                  <Label htmlFor="installmentsCount">Nº Parcelas</Label>
-                  <Input
-                    id="installmentsCount"
+            return null;
+          })()}
+          
+          {!isTransfer && (
+            <>
+              {forcedType ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <UnformInput
+                    name="amount"
+                    label="Valor"
                     type="number"
-                    min={2}
-                    max={60}
-                    value={installmentsCount}
-                    onChange={(e) =>
-                      setInstallmentsCount(
-                        Math.max(2, parseInt(e.target.value) || 2)
-                      )
-                    }
+                    step="0.01"
+                    placeholder="0,00"
+                    required
                   />
                 </div>
-                <div className="sm:col-span-2 text-sm text-muted-foreground flex items-end">
-                  O backend criará {installmentsCount} parcelas. A última pode
-                  ajustar centavos.
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <UnformSelect
+                    name="type"
+                    label="Tipo"
+                    required
+                    placeholder="Selecione o tipo"
+                    onChangeValue={(v) => setIsTransfer(v === "transfer")}
+                    defaultValue={initialData?.type}
+                  >
+                    <SelectItem value="income">Receita</SelectItem>
+                    <SelectItem value="expense">Despesa</SelectItem>
+                    <SelectItem value="transfer">Transferência</SelectItem>
+                  </UnformSelect>
+                  <UnformInput
+                    name="amount"
+                    label="Valor"
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    required
+                  />
                 </div>
+              )}
+
+              <UnformInput
+                name="description"
+                label="Descrição"
+                placeholder="Descreva a transação"
+                required
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <UnformSelect
+                  name="category"
+                  label="Categoria"
+                  placeholder="Selecione a categoria ou subcategoria"
+                >
+                  {ref.categories.map((c) => (
+                    <Fragment key={`grp-${c.id}`}>
+                      <SelectItem key={`c-${c.id}`} value={`c:${c.id}`}>
+                        {c.name}
+                      </SelectItem>
+                      {ref.subCategories
+                        .filter((s) => s.category_id === c.id)
+                        .map((s) => (
+                          <SelectItem
+                            key={`s-${c.id}-${s.id}`}
+                            value={`s:${c.id}:${s.id}`}
+                          >
+                            {c.name} → {s.name}
+                          </SelectItem>
+                        ))}
+                    </Fragment>
+                  ))}
+                </UnformSelect>
+                <UnformSelect
+                  name="account"
+                  label={isTransfer ? "Conta (destino)" : "Conta"}
+                  required
+                  placeholder={isTransfer ? "Selecione a conta de destino" : "Selecione a conta"}
+                  defaultValue={initialData?.account}
+                >
+                  {accounts.list.data?.map((acc) => (
+                    <SelectItem key={acc.id} value={String(acc.id)}>
+                      {acc.name}
+                    </SelectItem>
+                  ))}
+                </UnformSelect>
+                {isTransfer && (
+                  <UnformSelect
+                    name="account_out_id"
+                    label="Conta de origem"
+                    required
+                    placeholder="Selecione a conta de origem"
+                    defaultValue={initialData?.account_out_id}
+                  >
+                    {accounts.list.data?.map((acc) => (
+                      <SelectItem key={acc.id} value={String(acc.id)}>
+                        {acc.name}
+                      </SelectItem>
+                    ))}
+                  </UnformSelect>
+                )}
               </div>
-            )}
-          </div>
+
+              {isTransfer && (
+                <div className="text-xs text-muted-foreground">
+                  {(() => {
+                    const oid = Number(
+                      (formRef.current?.getFieldValue("account_out_id") as string) || ""
+                    );
+                    const bal = dashboard?.accounts?.find((a) => a.id === oid)?.balance;
+                    return bal !== undefined
+                      ? `Saldo na origem: ${bal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+                      : null;
+                  })()}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date
+                        ? format(date, "PPP", { locale: ptBR })
+                        : "Selecione a data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(d) => d && setDate(d)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {formError && (
+                <div className="text-sm text-destructive">{formError}</div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="tags"
+                    placeholder="Adicionar tag"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), handleAddTag())
+                    }
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddTag}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="flex items-center space-x-1"
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <SubCategoryManager
+                subCategories={subCategories}
+                onSubCategoriesChange={setSubCategories}
+                totalValue={
+                  parseFloat(
+                    (formRef.current?.getFieldValue("amount") as string) || "0"
+                  ) || 0
+                }
+              />
+
+              <div className="space-y-2 p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <input
+                    id="enableInstallments"
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={installmentsEnabled}
+                    onChange={(e) => setInstallmentsEnabled(e.target.checked)}
+                    disabled={isTransfer}
+                  />
+                  <Label htmlFor="enableInstallments" className="cursor-pointer">
+                    Parcelar (backend divide valor igualmente)
+                  </Label>
+                </div>
+                {installmentsEnabled && !isTransfer && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1 sm:col-span-1">
+                      <Label htmlFor="installmentsCount">Nº Parcelas</Label>
+                      <Input
+                        id="installmentsCount"
+                        type="number"
+                        min={2}
+                        max={60}
+                        value={installmentsCount}
+                        onChange={(e) =>
+                          setInstallmentsCount(
+                            Math.max(2, parseInt(e.target.value) || 2)
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="sm:col-span-2 text-sm text-muted-foreground flex items-end">
+                      O backend criará {installmentsCount} parcelas. A última pode
+                      ajustar centavos.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="flex space-x-3 pt-4">
             <Button type="submit" className="flex-1">
