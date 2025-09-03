@@ -123,11 +123,30 @@ const TransactionsPage = () => {
     account?: number | string;
     account_out_id?: number | string;
     description?: string;
-    category?: string;
+    category?: string; // formato: "c:<catId>" ou "s:<catId>:<subId>"
     subCategories?: UI_SubCategory[];
     tags?: string[];
     installments_count?: number; // novo
   }
+  const parseCategoryValue = (val?: string): { category_id?: number; sub_category_id?: number } => {
+    if (!val) return {};
+    if (val.startsWith('c:')) {
+      const c = Number(val.split(':')[1]);
+      return { category_id: Number.isNaN(c) ? undefined : c };
+    }
+    if (val.startsWith('s:')) {
+      const parts = val.split(':');
+      const c = Number(parts[1]);
+      const s = Number(parts[2]);
+      return {
+        category_id: Number.isNaN(c) ? undefined : c,
+        sub_category_id: Number.isNaN(s) ? undefined : s,
+      };
+    }
+    // fallback antigo (id puro)
+    const c = Number(val);
+    return { category_id: Number.isNaN(c) ? undefined : c };
+  };
   const handleNewTransaction = async (form: FormSubmitPayload) => {
     const type = form.type as string as "income" | "expense" | "transfer";
     try {
@@ -136,8 +155,8 @@ const TransactionsPage = () => {
         category_id: sc.categoryId,
         sub_category_id: sc.subCategoryId,
       }));
-      const category_id =
-        !subs.length && form.category ? Number(form.category) : undefined;
+      const { category_id, sub_category_id } =
+        !subs.length ? parseCategoryValue(form.category) : {};
       await tx.create.mutateAsync({
         transaction_type: type,
         value: Number(form.amount),
@@ -147,6 +166,7 @@ const TransactionsPage = () => {
           type === "transfer" ? Number(form.account_out_id) : undefined,
         notes: form.description,
         category_id,
+        sub_category_id,
         subs: subs.length ? subs : undefined,
         installments_count:
           form.installments_count && form.installments_count > 1
@@ -181,8 +201,8 @@ const TransactionsPage = () => {
         category_id: sc.categoryId,
         sub_category_id: sc.subCategoryId,
       }));
-      const category_id =
-        !subs.length && form.category ? Number(form.category) : undefined;
+      const { category_id, sub_category_id } =
+        !subs.length ? parseCategoryValue(form.category) : {};
       await api.transactions.update(editingTx.transaction_id, {
         transaction_type: type,
         value: Number(form.amount),
@@ -191,6 +211,7 @@ const TransactionsPage = () => {
         account_out_id: type === "transfer" ? Number(form.account_out_id) : undefined,
         notes: form.description,
         category_id,
+        sub_category_id,
         subs: subs.length ? subs : undefined,
         installments_count:
           form.installments_count && form.installments_count > 1
@@ -326,7 +347,11 @@ const TransactionsPage = () => {
                       editingTx.subs &&
                       editingTx.subs.length === 1 &&
                       editingTx.subs[0].category_id
-                        ? String(editingTx.subs[0].category_id)
+                        ? (
+                            editingTx.subs[0].sub_category_id
+                              ? `s:${editingTx.subs[0].category_id}:${editingTx.subs[0].sub_category_id}`
+                              : `c:${editingTx.subs[0].category_id}`
+                          )
                         : undefined,
                   }}
                   isEditing

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,21 +37,31 @@ const SubCategoryManager = ({
   const ref = useReferenceData();
   const [newSubCategory, setNewSubCategory] = useState<{
     value: string;
-    categoryId?: string;
-    subCategoryId?: string;
+    selection?: string; // formato: "c:<catId>" ou "s:<catId>:<subId>"
   }>({ value: "" });
 
   const handleAddSubCategory = () => {
     if (!newSubCategory.value) return;
+    let categoryId: number | undefined = undefined;
+    let subCategoryId: number | undefined = undefined;
+    if (newSubCategory.selection) {
+      const sel = newSubCategory.selection;
+      if (sel.startsWith("c:")) {
+        const cId = Number(sel.split(":")[1]);
+        if (!Number.isNaN(cId)) categoryId = cId;
+      } else if (sel.startsWith("s:")) {
+        const parts = sel.split(":");
+        const cId = Number(parts[1]);
+        const sId = Number(parts[2]);
+        if (!Number.isNaN(cId)) categoryId = cId;
+        if (!Number.isNaN(sId)) subCategoryId = sId;
+      }
+    }
     const sub: SubCategory = {
       id: Date.now().toString(),
       value: parseFloat(newSubCategory.value),
-      categoryId: newSubCategory.categoryId
-        ? Number(newSubCategory.categoryId)
-        : undefined,
-      subCategoryId: newSubCategory.subCategoryId
-        ? Number(newSubCategory.subCategoryId)
-        : undefined,
+      categoryId,
+      subCategoryId,
     };
     onSubCategoriesChange([...subCategories, sub]);
     setNewSubCategory({ value: "" });
@@ -71,7 +81,7 @@ const SubCategoryManager = ({
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Calculator className="h-5 w-5" />
-          Subcategorias
+          Rateio por categoria
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -94,50 +104,37 @@ const SubCategoryManager = ({
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="category">Categoria</Label>
             <Select
               onValueChange={(value) =>
                 setNewSubCategory((prev) => ({
                   ...prev,
-                  categoryId: value || undefined,
+                  selection: value || undefined,
                 }))
               }
-              value={newSubCategory.categoryId}
+              value={newSubCategory.selection}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
+                <SelectValue placeholder="Selecione categoria ou subcategoria" />
               </SelectTrigger>
               <SelectContent>
                 {ref.categories.map((cat) => (
-                  <SelectItem key={cat.id} value={String(cat.id)}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="subCategory">Subcategoria</Label>
-            <Select
-              onValueChange={(value) =>
-                setNewSubCategory((prev) => ({
-                  ...prev,
-                  subCategoryId: value || undefined,
-                }))
-              }
-              value={newSubCategory.subCategoryId}
-              disabled={false}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {ref.subCategories.map((sc) => (
-                  <SelectItem key={sc.id} value={String(sc.id)}>
-                    {sc.name}
-                  </SelectItem>
+                  <Fragment key={`grp-${cat.id}`}>
+                    <SelectItem key={`c-${cat.id}`} value={`c:${cat.id}`}>
+                      {cat.name}
+                    </SelectItem>
+                    {ref.subCategories
+                      .filter((s) => s.category_id === cat.id)
+                      .map((sc) => (
+                        <SelectItem
+                          key={`s-${cat.id}-${sc.id}`}
+                          value={`s:${cat.id}:${sc.id}`}
+                        >
+                          {cat.name} → {sc.name}
+                        </SelectItem>
+                      ))}
+                  </Fragment>
                 ))}
               </SelectContent>
             </Select>
