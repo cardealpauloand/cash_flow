@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -259,12 +259,24 @@ const TransactionForm = ({
             <UnformSelect
               name="category"
               label="Categoria"
-              placeholder="Selecione a categoria"
+              placeholder="Selecione a categoria ou subcategoria"
             >
               {ref.categories.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {c.name}
-                </SelectItem>
+                <Fragment key={`grp-${c.id}`}>
+                  <SelectItem key={`c-${c.id}`} value={`c:${c.id}`}>
+                    {c.name}
+                  </SelectItem>
+                  {ref.subCategories
+                    .filter((s) => s.category_id === c.id)
+                    .map((s) => (
+                      <SelectItem
+                        key={`s-${c.id}-${s.id}`}
+                        value={`s:${c.id}:${s.id}`}
+                      >
+                        {c.name} → {s.name}
+                      </SelectItem>
+                    ))}
+                </Fragment>
               ))}
             </UnformSelect>
             <UnformSelect
