@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
   ReactNode,
+  useCallback,
 } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,7 +36,7 @@ export const ReferenceDataProvider = ({
   const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useAuth();
 
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const [cats, subs] = await Promise.all([
@@ -57,7 +58,7 @@ export const ReferenceDataProvider = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Carrega dados apenas quando autenticado para evitar 401 antes do login
   useEffect(() => {
@@ -71,7 +72,7 @@ export const ReferenceDataProvider = ({
       setSubCategories([]);
       setTags([]);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadAll]);
 
   return (
     <ReferenceDataContext.Provider
