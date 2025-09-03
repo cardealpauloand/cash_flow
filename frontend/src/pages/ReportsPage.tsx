@@ -121,25 +121,27 @@ const ReportsPage = () => {
     value: c.value,
   }));
 
-  // Neon palette for pie slices (vivid, high-contrast colors)
-  const neonPalette = [
-    "#00E5FF", // neon cyan
-    "#7C4DFF", // neon purple
-    "#00FF95", // neon mint
-    "#FF3D81", // neon pink
-    "#FFD600", // neon yellow
-    "#29FFEA", // neon aqua
-    "#FF6F00", // neon orange
-    "#A0FF00", // neon lime
-    "#FF00E5", // neon magenta
-    "#00C3FF", // bright azure
+  // Soft, balanced palette for pie slices (non-neon)
+  const softPalette = [
+    "#4C78A8",
+    "#F58518",
+    "#E45756",
+    "#72B7B2",
+    "#54A24B",
+    "#EECA3B",
+    "#B279A2",
+    "#FF9DA7",
+    "#9E765F",
+    "#BAB0AC",
+    "#6C9BD2",
+    "#8CD17D",
   ];
 
   const totalReceitas = data?.totals.income || 0;
   const totalDespesas = data?.totals.expenses || 0;
   const saldoLiquido = data?.totals.net || 0;
 
-  // Render pie labels outside with matching slice color (no glow)
+  // Render pie labels outside with a custom pointer line aligned to the text
   const RADIAN = Math.PI / 180;
   const renderPieLabel = (props: any) => {
     const { cx, cy, midAngle, outerRadius, percent, index, name, value } = props;
@@ -154,21 +156,35 @@ const ReportsPage = () => {
     ) {
       return null;
     }
-    const radius = outerRadius + 18;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    const color = neonPalette[index % neonPalette.length];
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + outerRadius * cos;
+    const sy = cy + outerRadius * sin;
+    const mx = cx + (outerRadius + 10) * cos;
+    const my = cy + (outerRadius + 10) * sin;
+    const ex = mx + (cos >= 0 ? 22 : -22);
+    const ey = my;
+    const textAnchor = cos >= 0 ? "start" : "end";
+    const label = `${name} ${(percent * 100).toFixed(0)}%`;
+
     return (
-      <text
-        x={x}
-        y={y}
-        fill={color}
-        textAnchor={x > cx ? "start" : "end"}
-        dominantBaseline="central"
-        style={{ filter: "none" }}
-      >
-        {`${name} ${(percent * 100).toFixed(0)}%`}
-      </text>
+      <g>
+        <path
+          d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+          stroke="hsl(var(--muted-foreground))"
+          fill="none"
+        />
+        <text
+          x={ex + (cos >= 0 ? 6 : -6)}
+          y={ey}
+          fill={"hsl(var(--foreground))"}
+          textAnchor={textAnchor}
+          dominantBaseline="central"
+          style={{ fontSize: 13 }}
+        >
+          {label}
+        </text>
+      </g>
     );
   };
 
@@ -315,36 +331,26 @@ const ReportsPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={340}>
                 <RechartsPieChart>
-                  {/* Neon glow filter for pie slices */}
-                  <defs>
-                    <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
-                      <feMerge>
-                        <feMergeNode in="blur" />
-                        <feMergeNode in="SourceGraphic" />
-                      </feMerge>
-                    </filter>
-                  </defs>
-
                   <Pie
                     data={categoryData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    outerRadius={92}
                     fill="#8884d8"
-                    stroke="none"
-                    strokeWidth={0}
+                    stroke="#FFFFFF"
+                    strokeWidth={2}
                     dataKey="value"
                     label={categoryData.length ? renderPieLabel : false}
-                    labelLine
+                    labelLine={false}
+                    isAnimationActive={false}
+                    paddingAngle={0}
                   >
           {categoryData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-            fill={neonPalette[index % neonPalette.length]}
-            style={{ filter: "url(#neonGlow)" }}
+            fill={softPalette[index % softPalette.length]}
                       />
                     ))}
                   </Pie>
@@ -370,10 +376,9 @@ const ReportsPage = () => {
                 >
                   <div className="flex items-center space-x-3">
                     <div
-                      className="w-4 h-4 rounded-full"
+                      className="w-4 h-4 rounded-full border border-white/80"
                       style={{
-                        backgroundColor: neonPalette[idx % neonPalette.length],
-                        boxShadow: `${neonPalette[idx % neonPalette.length]}80 0px 0px 8px`,
+                        backgroundColor: softPalette[idx % softPalette.length],
                       }}
                     />
                     <span className="font-medium">{cat.name}</span>
