@@ -283,42 +283,51 @@ const TransactionsPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={(open) => {
-            setIsModalOpen(open);
-            if (!open) setNewTxType(null);
-          }}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {newTxType === "income" && "Nova Receita"}
-                  {newTxType === "expense" && "Nova Despesa"}
-                  {newTxType === "transfer" && "Nova Transferência"}
-                  {!newTxType && t("newTransaction")}
-                </DialogTitle>
-                <DialogDescription>
-                  Preencha os dados da nova transação.
-                </DialogDescription>
-              </DialogHeader>
-              <TransactionForm
-                onSubmit={handleNewTransaction}
-                onCancel={() => setIsModalOpen(false)}
-                initialData={newTxType ? { type: newTxType, amount: 0, description: "", account: "", date: new Date().toISOString().slice(0,10) } as any : undefined}
-                forcedType={newTxType ?? undefined}
-                titleOverride={newTxType === "income" ? "Nova Receita" : newTxType === "expense" ? "Nova Despesa" : newTxType === "transfer" ? "Nova Transferência" : undefined}
-              />
-            </DialogContent>
+          <Dialog
+            open={isModalOpen}
+            onOpenChange={(open) => {
+              setIsModalOpen(open);
+              if (!open) setNewTxType(null);
+            }}
+          >
+            {isModalOpen && (
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {newTxType === "income" && "Nova Receita"}
+                    {newTxType === "expense" && "Nova Despesa"}
+                    {newTxType === "transfer" && "Nova Transferência"}
+                    {!newTxType && t("newTransaction")}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados da nova transação.
+                  </DialogDescription>
+                </DialogHeader>
+                <TransactionForm
+                  onSubmit={handleNewTransaction}
+                  onCancel={() => setIsModalOpen(false)}
+                  initialData={newTxType ? { type: newTxType, amount: 0, description: "", account: "", date: new Date().toISOString().slice(0,10) } as any : undefined}
+                  forcedType={newTxType ?? undefined}
+                  titleOverride={newTxType === "income" ? "Nova Receita" : newTxType === "expense" ? "Nova Despesa" : newTxType === "transfer" ? "Nova Transferência" : undefined}
+                />
+              </DialogContent>
+            )}
           </Dialog>
-          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Editar transação</DialogTitle>
-                {editingTx && (
+          <Dialog
+            open={isEditModalOpen}
+            onOpenChange={(open) => {
+              setIsEditModalOpen(open);
+              if (!open) setEditingTx(null);
+            }}
+          >
+            {isEditModalOpen && editingTx && (
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Editar transação</DialogTitle>
                   <DialogDescription>
                     Editando parcela #{editingTx.id}
                   </DialogDescription>
-                )}
-              </DialogHeader>
-              {editingTx && (
+                </DialogHeader>
                 <TransactionForm
                   onSubmit={handleUpdateTransaction}
                   onCancel={() => {
@@ -356,17 +365,20 @@ const TransactionsPage = () => {
                   }}
                   isEditing
                 />
-              )}
-            </DialogContent>
+              </DialogContent>
+            )}
           </Dialog>
           <AlertDialog
             open={!!deletingTx}
-            onOpenChange={() => setDeletingTx(null)}
+            onOpenChange={(open) => {
+              if (!open) setDeletingTx(null);
+            }}
           >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                {deletingTx && mapType(deletingTx.root_transaction_type_id) === "transfer" ? (
+            {!!deletingTx && (
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                {mapType(deletingTx.root_transaction_type_id) === "transfer" ? (
                   <AlertDialogDescription>
                     Tem certeza que deseja excluir a transferência inteira? Isso removerá as duas movimentações (entrada e saída). Esta ação não pode ser desfeita.
                   </AlertDialogDescription>
@@ -387,7 +399,8 @@ const TransactionsPage = () => {
                   Excluir
                 </AlertDialogAction>
               </AlertDialogFooter>
-            </AlertDialogContent>
+              </AlertDialogContent>
+            )}
           </AlertDialog>
         </div>
 

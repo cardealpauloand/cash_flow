@@ -83,6 +83,18 @@ class TransactionController extends Controller
     {
         $userId = auth('api')->id();
         $typeRow = TransactionType::where('name', $request->transaction_type)->firstOrFail();
+        // Normalize category/subcategory pairing: if only sub_category_id is provided,
+        // infer category_id. If both provided but mismatch, return 422.
+        if ($request->filled('sub_category_id')) {
+            $sub = \App\Models\SubCategory::find($request->sub_category_id);
+            if ($sub) {
+                if (!$request->filled('category_id')) {
+                    $request->merge(['category_id' => $sub->category_id]);
+                } elseif ((int) $request->category_id !== (int) $sub->category_id) {
+                    abort(422, 'A subcategoria não pertence à categoria selecionada.');
+                }
+            }
+        }
 
         return DB::transaction(function () use ($request, $userId, $typeRow) {
             $installmentsCount = (int) $request->input('installments_count', 1);
@@ -223,6 +235,13 @@ class TransactionController extends Controller
                                 'transactions_installments_id' => $inst->id,
                                 'value' => $subVal,
                             ]);
+                            // If sub_category_id is present but category_id missing, infer it
+                            if (!empty($subPayload['sub_category_id']) && empty($subPayload['category_id'])) {
+                                $subRow = \App\Models\SubCategory::find($subPayload['sub_category_id']);
+                                if ($subRow) {
+                                    $subPayload['category_id'] = $subRow->category_id;
+                                }
+                            }
                             if (!empty($subPayload['category_id'])) {
                                 TransactionCategory::create([
                                     'transactions_sub_id' => $sub->id,
@@ -296,6 +315,18 @@ class TransactionController extends Controller
         }
 
         $typeRow = TransactionType::where('name', $request->transaction_type)->firstOrFail();
+
+        // Normalize category/subcategory pairing similar to store()
+        if ($request->filled('sub_category_id')) {
+            $sub = \App\Models\SubCategory::find($request->sub_category_id);
+            if ($sub) {
+                if (!$request->filled('category_id')) {
+                    $request->merge(['category_id' => $sub->category_id]);
+                } elseif ((int) $request->category_id !== (int) $sub->category_id) {
+                    abort(422, 'A subcategoria não pertence à categoria selecionada.');
+                }
+            }
+        }
 
         return DB::transaction(function () use ($request, $transaction, $typeRow, $userId) {
             // Regras específicas para transferência: validar saldo e propriedade das contas
