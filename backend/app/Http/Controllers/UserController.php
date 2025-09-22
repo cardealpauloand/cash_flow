@@ -20,7 +20,7 @@ class UserController extends Controller
         if ($request->filled('email')) {
             $user->email = $request->email;
         }
-        if ($request->has('phone')) { // permitir null
+        if ($request->has('phone')) {
             if (\Schema::hasColumn('users', 'phone')) {
                 $user->phone = $request->phone;
             }

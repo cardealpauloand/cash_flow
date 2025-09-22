@@ -5,7 +5,6 @@ import {
   Paginated,
   InstallmentListItem,
 } from "@/lib/api";
-
 export interface TransactionsFilters {
   type?: string;
   date_from?: string;
@@ -13,9 +12,7 @@ export interface TransactionsFilters {
   account_id?: number;
   page?: number;
 }
-
 const TX_KEY = (filters: TransactionsFilters) => ["transactions", filters];
-
 export function useTransactions(filters: TransactionsFilters) {
   const qc = useQueryClient();
   const list = useQuery<Paginated<InstallmentListItem>>({
@@ -24,27 +21,24 @@ export function useTransactions(filters: TransactionsFilters) {
       api.transactions.list(
         filters as Record<string, string | number | undefined>
       ),
-    placeholderData: (prev) => prev, // mantém dados anteriores enquanto carrega paginação
+    placeholderData: (prev) => prev,
   });
-
   const create = useMutation({
     mutationFn: (payload: TransactionCreatePayload) =>
       api.transactions.create(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
-  qc.invalidateQueries({ queryKey: ["reports", "summary"] });
+      qc.invalidateQueries({ queryKey: ["reports", "summary"] });
     },
   });
-
   const remove = useMutation({
     mutationFn: (id: number) => api.transactions.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
-  qc.invalidateQueries({ queryKey: ["reports", "summary"] });
+      qc.invalidateQueries({ queryKey: ["reports", "summary"] });
     },
   });
-
   return { list, create, remove };
 }

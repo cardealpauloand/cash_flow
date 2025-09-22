@@ -7,12 +7,12 @@ use App\Models\{TransactionInstallment, TransactionType, TransactionCategory, Tr
 
 class ReportsController extends Controller
 {
-    /**
-     * Summary report with aggregated data by month and category.
-     * Query params:
-     *  - date_from (Y-m-d)
-     *  - date_to (Y-m-d)
-     */
+
+
+
+
+
+
     public function summary(Request $request)
     {
         $userId = auth('api')->id();
@@ -23,12 +23,12 @@ class ReportsController extends Controller
         $start = $request->query('date_from', now()->subMonths(5)->startOfMonth()->toDateString());
         $end = $request->query('date_to', now()->endOfMonth()->toDateString());
 
-        // Monthly aggregation (sum of installments) within range
+
         $monthly = TransactionInstallment::query()
             ->join('transactions', 'transactions.id', '=', 'transactions_installments.transaction_id')
             ->where('transactions_installments.user_id', $userId)
             ->whereBetween('transactions.date', [$start, $end])
-            // Exclude transfers at the root level to avoid counting internal moves as income/expense
+
             ->where('transactions.transaction_type_id', '!=', $transferId)
             ->selectRaw("strftime('%Y-%m', transactions.date) as ym,
                 SUM(CASE WHEN transactions_installments.transaction_type_id = ? THEN transactions_installments.value ELSE 0 END) as income,
@@ -39,7 +39,7 @@ class ReportsController extends Controller
             ->orderBy('ym')
             ->get();
 
-        // Fill missing months in range
+
         $period = [];
         $cursor = \Carbon\Carbon::createFromFormat('Y-m-d', $start)->startOfMonth();
         $endC = \Carbon\Carbon::createFromFormat('Y-m-d', $end)->startOfMonth();
@@ -60,7 +60,7 @@ class ReportsController extends Controller
             ];
         }
 
-        // Category aggregation (using subs + direct category links)
+
         $categoryRows = TransactionInstallment::query()
             ->join('transactions', 'transactions.id', '=', 'transactions_installments.transaction_id')
             ->leftJoin('transactions_sub', 'transactions_sub.transactions_installments_id', '=', 'transactions_installments.id')
@@ -68,7 +68,7 @@ class ReportsController extends Controller
             ->leftJoin('category', 'category.id', '=', 'transactions_category.category_id')
             ->where('transactions_installments.user_id', $userId)
             ->whereBetween('transactions.date', [$start, $end])
-            // Exclude transfers at the root level for category spending
+
             ->where('transactions.transaction_type_id', '!=', $transferId)
             ->where('transactions_installments.transaction_type_id', $expenseId)
             ->selectRaw('category.name as category_name, COALESCE(category.name, "Outros") as final_name, SUM(transactions_sub.value) as total')

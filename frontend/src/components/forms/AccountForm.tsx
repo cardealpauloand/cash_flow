@@ -2,10 +2,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, Wallet, PiggyBank, Smartphone } from "lucide-react";
-
 interface AccountFormProps {
   onSubmit: (account: any) => void;
   onCancel: () => void;
@@ -17,39 +22,38 @@ interface AccountFormProps {
   };
   isEditing?: boolean;
 }
-
-const AccountForm = ({ onSubmit, onCancel, initialData, isEditing = false }: AccountFormProps) => {
+const AccountForm = ({
+  onSubmit,
+  onCancel,
+  initialData,
+  isEditing = false,
+}: AccountFormProps) => {
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     type: initialData?.type || "",
     balance: initialData?.balance?.toString() || "",
   });
-
   const accountTypes = [
     { value: "corrente", label: "Conta Corrente", icon: CreditCard },
     { value: "poupanca", label: "Poupança", icon: PiggyBank },
     { value: "carteira", label: "Carteira", icon: Wallet },
     { value: "cartao", label: "Cartão de Crédito", icon: Smartphone },
   ];
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     const account = {
       ...(initialData?.id && { id: initialData.id }),
       ...formData,
       balance: parseFloat(formData.balance) || 0,
     };
-    
     onSubmit(account);
   };
-
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
-
-  const selectedAccountType = accountTypes.find(type => type.value === formData.type);
-
+  const selectedAccountType = accountTypes.find(
+    (type) => type.value === formData.type
+  );
   return (
     <Card className="shadow-card">
       <CardHeader>
@@ -70,7 +74,11 @@ const AccountForm = ({ onSubmit, onCancel, initialData, isEditing = false }: Acc
 
           <div className="space-y-2">
             <Label htmlFor="type">Tipo de Conta *</Label>
-            <Select onValueChange={(value) => handleInputChange("type", value)} value={formData.type} required>
+            <Select
+              onValueChange={(value) => handleInputChange("type", value)}
+              value={formData.type}
+              required
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de conta" />
               </SelectTrigger>
@@ -96,10 +104,14 @@ const AccountForm = ({ onSubmit, onCancel, initialData, isEditing = false }: Acc
               <div>
                 <p className="font-medium">{selectedAccountType.label}</p>
                 <p className="text-sm text-muted-foreground">
-                  {selectedAccountType.value === "corrente" && "Conta para movimentação diária"}
-                  {selectedAccountType.value === "poupanca" && "Conta para guardar dinheiro"}
-                  {selectedAccountType.value === "carteira" && "Dinheiro em espécie"}
-                  {selectedAccountType.value === "cartao" && "Cartão de crédito ou débito"}
+                  {selectedAccountType.value === "corrente" &&
+                    "Conta para movimentação diária"}
+                  {selectedAccountType.value === "poupanca" &&
+                    "Conta para guardar dinheiro"}
+                  {selectedAccountType.value === "carteira" &&
+                    "Dinheiro em espécie"}
+                  {selectedAccountType.value === "cartao" &&
+                    "Cartão de crédito ou débito"}
                 </p>
               </div>
             </div>
@@ -116,7 +128,8 @@ const AccountForm = ({ onSubmit, onCancel, initialData, isEditing = false }: Acc
               onChange={(e) => handleInputChange("balance", e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
-              Para cartões de crédito, use valores negativos para representar dívidas
+              Para cartões de crédito, use valores negativos para representar
+              dívidas
             </p>
           </div>
 
@@ -124,7 +137,12 @@ const AccountForm = ({ onSubmit, onCancel, initialData, isEditing = false }: Acc
             <Button type="submit" className="flex-1">
               {isEditing ? "Salvar Alterações" : "Criar Conta"}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="flex-1"
+            >
               Cancelar
             </Button>
           </div>
@@ -133,5 +151,4 @@ const AccountForm = ({ onSubmit, onCancel, initialData, isEditing = false }: Acc
     </Card>
   );
 };
-
 export default AccountForm;

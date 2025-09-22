@@ -11,7 +11,7 @@ class User extends Authenticatable implements JWTSubject
     use Notifiable, HasFactory;
 
     protected $table = 'users';
-    public $timestamps = false; // schema usa apenas created_at
+    public $timestamps = false;
 
     protected $fillable = [
         'name',
@@ -23,7 +23,7 @@ class User extends Authenticatable implements JWTSubject
 
     protected $hidden = ['password_hash'];
 
-    // Permite ao Laravel/JWT usar password_hash
+
     public function getAuthPassword()
     {
         return $this->password_hash;
@@ -39,7 +39,7 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Transaction::class);
     }
 
-    // JWTSubject implementation
+
     public function getJWTIdentifier()
     {
         return $this->getKey();

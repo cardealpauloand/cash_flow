@@ -3,7 +3,6 @@ import { Progress } from "@/components/ui/progress";
 import { CreditCard, Wallet, PiggyBank, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/contexts/AppContext";
-
 interface Account {
   id: string | number;
   name: string;
@@ -11,26 +10,22 @@ interface Account {
   balance: number;
   percentage?: number;
 }
-
 interface AccountBalanceProps {
   accounts?: Account[];
   loading?: boolean;
 }
-
 const accountIcons = {
   corrente: CreditCard,
   poupanca: PiggyBank,
   carteira: Wallet,
   cartao: Smartphone,
 };
-
 const accountColors = {
   corrente: "from-blue-500 to-blue-600",
   poupanca: "from-green-500 to-green-600",
   carteira: "from-yellow-500 to-yellow-600",
   cartao: "from-purple-500 to-purple-600",
 };
-
 const mockAccounts: Account[] = [
   {
     id: "1",
@@ -61,11 +56,9 @@ const mockAccounts: Account[] = [
     percentage: 10,
   },
 ];
-
 export const AccountBalance = ({ accounts, loading }: AccountBalanceProps) => {
   const { formatCurrency } = useApp();
   const list = accounts && accounts.length ? accounts : mockAccounts;
-
   return (
     <Card className="shadow-card">
       <CardHeader>

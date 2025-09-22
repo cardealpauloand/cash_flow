@@ -23,7 +23,7 @@ return new class extends Migration {
                 try {
                     $table->dropForeign(['category_id']);
                 } catch (\Throwable $e) {
-                    // ignore
+
                 }
                 $table->dropColumn('category_id');
             }

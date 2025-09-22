@@ -10,7 +10,7 @@ class TransactionController extends Controller
 {
     public function count(Request $request)
     {
-        // Conta transações raiz do usuário autenticado (não parcelas)
+
         $userId = auth('api')->id();
         $q = Transaction::query()->where('user_id', $userId);
         if ($request->filled('date_from')) $q->whereDate('date', '>=', $request->date_from);
@@ -19,7 +19,7 @@ class TransactionController extends Controller
     }
     public function index(Request $request)
     {
-        // Nova listagem baseada em parcels (transactions_installments)
+
         $q = TransactionInstallment::query()
             ->with(['subs.categoryLink.category', 'subs.categoryLink.subCategory', 'tags', 'transaction'])
             ->where('transactions_installments.user_id', auth('api')->id())
@@ -34,12 +34,12 @@ class TransactionController extends Controller
             ]);
 
         if ($request->filled('type')) {
-            $typeName = $request->type; // income|expense|transfer
+            $typeName = $request->type;
             $typeId = TransactionType::where('name', $typeName)->value('id');
             if ($typeId) {
-                // Filtra pelo tipo da parcela OU, se transfer, pelo tipo raiz transfer
+
                 if ($typeName === 'transfer') {
-                    $rootTransferId = $typeId; // id do tipo transfer
+                    $rootTransferId = $typeId;
                     $q->where('transactions.transaction_type_id', $rootTransferId);
                 } else {
                     $q->where('transactions_installments.transaction_type_id', $typeId);
@@ -83,8 +83,8 @@ class TransactionController extends Controller
     {
         $userId = auth('api')->id();
         $typeRow = TransactionType::where('name', $request->transaction_type)->firstOrFail();
-        // Normalize category/subcategory pairing: if only sub_category_id is provided,
-        // infer category_id. If both provided but mismatch, return 422.
+
+
         if ($request->filled('sub_category_id')) {
             $sub = \App\Models\SubCategory::find($request->sub_category_id);
             if ($sub) {
@@ -99,12 +99,12 @@ class TransactionController extends Controller
         return DB::transaction(function () use ($request, $userId, $typeRow) {
             $installmentsCount = (int) $request->input('installments_count', 1);
 
-            // Regras específicas para transferência: validar saldo e propriedade das contas
+
             if ($request->transaction_type === 'transfer') {
-                // Origem = account_out_id, Destino = account_id
+
                 $origin = \App\Models\Account::findOrFail($request->account_out_id);
                 $destination = \App\Models\Account::findOrFail($request->account_id);
-                // Verifica se ambas as contas pertencem ao usuário logado
+
                 if ($origin->user_id !== $userId || $destination->user_id !== $userId) {
                     abort(403, 'Conta não pertence ao usuário.');
                 }
@@ -112,7 +112,7 @@ class TransactionController extends Controller
                 $incomeId = TransactionType::where('name', 'income')->value('id');
                 $expenseId = TransactionType::where('name', 'expense')->value('id');
 
-                // Saldo atual da conta de origem: abertura + entradas - saídas (parcelas)
+
                 $originOpening = (float) ($origin->opening_balance ?? 0);
                 $originIncome = (float) \App\Models\TransactionInstallment::where('user_id', $userId)
                     ->where('account_id', $origin->id)
@@ -142,7 +142,7 @@ class TransactionController extends Controller
                 'created_at' => now(),
             ]);
 
-            // Transfer segue lógica antiga (sempre 2 installments, não parcelado)
+
             if ($request->transaction_type === 'transfer') {
                 $incomeId = TransactionType::where('name', 'income')->value('id');
                 $expenseId = TransactionType::where('name', 'expense')->value('id');
@@ -163,7 +163,7 @@ class TransactionController extends Controller
                 ]);
 
                 foreach ([$inInst, $outInst] as $inst) {
-                    // Se o request trouxer subs, criá-los proporcionalmente (apenas para a parcela de entrada?)
+
                     if ($request->filled('subs') && is_array($request->subs) && $inst->transaction_type_id === $incomeId) {
                         foreach ($request->subs as $subPayload) {
                             $sub = TransactionSub::create([
@@ -201,21 +201,21 @@ class TransactionController extends Controller
                     }
                 }
             } else {
-                // Parcelamento para income / expense
+
                 if ($installmentsCount <= 1) {
-                    $installmentsCount = 1; // fallback
+                    $installmentsCount = 1;
                 }
-                // Cálculo das parcelas: dividir value igualmente e ajustar última para corrigir arredondamento
+
                 $total = (float) $request->value;
-                $baseValue = round(floor(($total / $installmentsCount) * 100) / 100, 2); // trunc
+                $baseValue = round(floor(($total / $installmentsCount) * 100) / 100, 2);
                 $accum = 0.0;
-                $startDate = \Carbon\Carbon::parse($request->date); // mantido caso futuro adicionemos date por parcela
+                $startDate = \Carbon\Carbon::parse($request->date);
                 for ($i = 0; $i < $installmentsCount; $i++) {
                     if ($i < $installmentsCount - 1) {
                         $val = $baseValue;
                         $accum += $val;
                     } else {
-                        $val = round($total - $accum, 2); // última
+                        $val = round($total - $accum, 2);
                     }
 
                     $inst = TransactionInstallment::create([
@@ -227,15 +227,15 @@ class TransactionController extends Controller
                     ]);
 
                     if ($request->filled('subs') && is_array($request->subs)) {
-                        // Distribui subs proporcionalmente ao valor da parcela
-                        $ratio = $val / $total; // proporção
+
+                        $ratio = $val / $total;
                         foreach ($request->subs as $subPayload) {
                             $subVal = round($subPayload['value'] * $ratio, 2);
                             $sub = TransactionSub::create([
                                 'transactions_installments_id' => $inst->id,
                                 'value' => $subVal,
                             ]);
-                            // If sub_category_id is present but category_id missing, infer it
+
                             if (!empty($subPayload['sub_category_id']) && empty($subPayload['category_id'])) {
                                 $subRow = \App\Models\SubCategory::find($subPayload['sub_category_id']);
                                 if ($subRow) {
@@ -274,7 +274,7 @@ class TransactionController extends Controller
                 }
             }
 
-            // Retorna as parcelas criadas (uma ou duas) para o frontend já usar na listagem
+
             $installments = TransactionInstallment::where('transaction_id', $tx->id)
                 ->with(['subs.categoryLink.category', 'subs.categoryLink.subCategory', 'tags'])
                 ->get();
@@ -316,7 +316,7 @@ class TransactionController extends Controller
 
         $typeRow = TransactionType::where('name', $request->transaction_type)->firstOrFail();
 
-        // Normalize category/subcategory pairing similar to store()
+
         if ($request->filled('sub_category_id')) {
             $sub = \App\Models\SubCategory::find($request->sub_category_id);
             if ($sub) {
@@ -329,7 +329,7 @@ class TransactionController extends Controller
         }
 
         return DB::transaction(function () use ($request, $transaction, $typeRow, $userId) {
-            // Regras específicas para transferência: validar saldo e propriedade das contas
+
             if ($request->transaction_type === 'transfer') {
                 $origin = \App\Models\Account::findOrFail($request->account_out_id);
                 $destination = \App\Models\Account::findOrFail($request->account_id);
@@ -349,7 +349,7 @@ class TransactionController extends Controller
                     ->where('account_id', $origin->id)
                     ->where('transaction_type_id', $expenseId)
                     ->sum('value');
-                // If keeping the same origin, add back the current transaction's expense to simulate replacement
+
                 $originBalance = round($originOpening + $originIncome - $originExpense, 2);
                 $prevOriginId = $transaction->account_out_id;
                 if ($prevOriginId && (int)$prevOriginId === (int)$origin->id) {
@@ -365,7 +365,7 @@ class TransactionController extends Controller
                     ], 422);
                 }
             }
-            // Update root transaction fields
+
             $transaction->value = $request->value;
             $transaction->transaction_type_id = $typeRow->id;
             $transaction->date = $request->date;
@@ -374,7 +374,7 @@ class TransactionController extends Controller
             $transaction->notes = $request->notes;
             $transaction->save();
 
-            // Remove existing installments and related subs/tags/categories
+
             $instIds = TransactionInstallment::where('transaction_id', $transaction->id)->pluck('id');
             $subIds = TransactionSub::whereIn('transactions_installments_id', $instIds)->pluck('id');
             TransactionTag::whereIn('transactions_installments_id', $instIds)->delete();
@@ -382,7 +382,7 @@ class TransactionController extends Controller
             TransactionSub::whereIn('id', $subIds)->delete();
             TransactionInstallment::whereIn('id', $instIds)->delete();
 
-            // Recreate installments
+
             $installmentsCount = (int) $request->input('installments_count', 1);
             if ($request->transaction_type === 'transfer') {
                 $incomeId = TransactionType::where('name', 'income')->value('id');
@@ -508,17 +508,17 @@ class TransactionController extends Controller
 
     public function destroy($id, Request $request)
     {
-        // Tentar como transação primeiro; se não existir, interpretar como installment id
+
         $transaction = Transaction::find($id);
         $installmentId = $request->query('installment_id');
 
         if (!$transaction) {
-            $installment = TransactionInstallment::findOrFail($id); // então $id é parcela
+            $installment = TransactionInstallment::findOrFail($id);
             $transaction = Transaction::findOrFail($installment->transaction_id);
-            $installmentId = $installment->id; // força deleção desta parcela
+            $installmentId = $installment->id;
         }
 
-        // Autorização simples
+
         if ($transaction->user_id !== auth('api')->id()) {
             abort(403, 'Forbidden');
         }
@@ -529,7 +529,7 @@ class TransactionController extends Controller
             $count = TransactionInstallment::where('transaction_id', $transaction->id)->count();
 
             if ($count <= 1) {
-                // Última parcela -> apagar transação completa
+
                 DB::transaction(function () use ($transaction) {
                     $instIds = TransactionInstallment::where('transaction_id', $transaction->id)->pluck('id');
                     $subIds = TransactionSub::whereIn('transactions_installments_id', $instIds)->pluck('id');
@@ -552,7 +552,7 @@ class TransactionController extends Controller
             return response()->json(['deleted' => true, 'transaction_deleted' => false]);
         }
 
-        // Sem installment_id: deleta tudo
+
         DB::transaction(function () use ($transaction) {
             $instIds = TransactionInstallment::where('transaction_id', $transaction->id)->pluck('id');
             $subIds = TransactionSub::whereIn('transactions_installments_id', $instIds)->pluck('id');

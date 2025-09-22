@@ -14,20 +14,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, X, Calculator } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useReferenceData } from "@/contexts/ReferenceDataContext";
-
 export interface SubCategory {
-  id: string; // internal UI id
+  id: string;
   value: number;
-  categoryId?: number; // id real da categoria
-  subCategoryId?: number; // id real da subcategoria
+  categoryId?: number;
+  subCategoryId?: number;
 }
-
 interface SubCategoryManagerProps {
   subCategories: SubCategory[];
   onSubCategoriesChange: (subCategories: SubCategory[]) => void;
   totalValue: number;
 }
-
 const SubCategoryManager = ({
   subCategories,
   onSubCategoriesChange,
@@ -37,9 +34,8 @@ const SubCategoryManager = ({
   const ref = useReferenceData();
   const [newSubCategory, setNewSubCategory] = useState<{
     value: string;
-    selection?: string; // formato: "c:<catId>" ou "s:<catId>:<subId>"
+    selection?: string;
   }>({ value: "" });
-
   const handleAddSubCategory = () => {
     if (!newSubCategory.value) return;
     let categoryId: number | undefined = undefined;
@@ -66,16 +62,13 @@ const SubCategoryManager = ({
     onSubCategoriesChange([...subCategories, sub]);
     setNewSubCategory({ value: "" });
   };
-
   const handleRemoveSubCategory = (id: string) => {
     onSubCategoriesChange(subCategories.filter((sub) => sub.id !== id));
   };
-
   const calculatedTotal = subCategories.reduce(
     (sum, sub) => sum + sub.value,
     0
   );
-
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -85,7 +78,6 @@ const SubCategoryManager = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Formulário para adicionar subcategoria */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="space-y-2">
             <Label htmlFor="subValue">Valor</Label>
@@ -154,7 +146,6 @@ const SubCategoryManager = ({
           </div>
         </div>
 
-        {/* Lista de subcategorias */}
         {subCategories.length > 0 && (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
@@ -185,7 +176,6 @@ const SubCategoryManager = ({
               ))}
             </div>
 
-            {/* Total calculado */}
             <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
               <span className="font-medium">Total Calculado:</span>
               <span className="font-bold text-lg">
@@ -193,7 +183,6 @@ const SubCategoryManager = ({
               </span>
             </div>
 
-            {/* Alerta se valores não batem */}
             {totalValue > 0 &&
               Math.abs(calculatedTotal - totalValue) > 0.01 && (
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
@@ -210,5 +199,4 @@ const SubCategoryManager = ({
     </Card>
   );
 };
-
 export default SubCategoryManager;

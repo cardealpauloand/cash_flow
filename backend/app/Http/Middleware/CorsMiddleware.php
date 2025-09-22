@@ -7,16 +7,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CorsMiddleware
 {
-    /**
-     * Handle an incoming request adding CORS headers.
-     */
+
+
+
     public function handle(Request $request, Closure $next): Response
     {
         if ($request->getMethod() === 'OPTIONS') {
             return response('', 204)->withHeaders($this->corsHeaders());
         }
 
-        /** @var Response $response */
+
         $response = $next($request);
         foreach ($this->corsHeaders() as $k => $v) {
             $response->headers->set($k, $v);

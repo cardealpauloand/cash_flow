@@ -3,7 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AccountRequest;
 use App\Models\Account;
-use App\Models\Transaction; // added
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 
 class AccountController extends Controller
@@ -43,7 +43,7 @@ class AccountController extends Controller
     public function destroy(Account $account)
     {
         $this->authorize('delete', $account);
-        // Block deletion if any transaction references this account (either direction)
+
         $hasIn = $account->transactions()->exists();
         $hasOut = Transaction::where('account_out_id', $account->id)->exists();
         if ($hasIn || $hasOut) {
@@ -51,7 +51,7 @@ class AccountController extends Controller
                 'error' => 'Conta possui transações e não pode ser excluída.'
             ], 409);
         }
-        $account->delete(); // soft delete
+        $account->delete();
         return response()->json(['deleted' => true]);
     }
 }

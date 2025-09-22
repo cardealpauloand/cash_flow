@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,19 +7,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
-import { LogOut, Settings, User } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
-
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { useApp } from "@/contexts/AppContext";
+import { LogOut, Settings, User } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 export const UserMenu = () => {
   const { user, logout } = useAuth();
   const { t } = useApp();
   const { toast } = useToast();
-
   const handleLogout = () => {
     logout();
     toast({
@@ -27,18 +25,15 @@ export const UserMenu = () => {
       description: "Você foi desconectado com sucesso",
     });
   };
-
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
-
   if (!user) return null;
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -70,11 +65,11 @@ export const UserMenu = () => {
         <DropdownMenuItem className="cursor-pointer" asChild>
           <Link to="/settings" className="flex items-center">
             <Settings className="mr-2 h-4 w-4" />
-            <span>{t('settings')}</span>
+            <span>{t("settings")}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
+        <DropdownMenuItem
           className="cursor-pointer text-destructive focus:text-destructive"
           onClick={handleLogout}
         >

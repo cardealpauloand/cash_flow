@@ -25,7 +25,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
 interface EditableSub {
   id?: number;
   name: string;
@@ -33,9 +32,12 @@ interface EditableSub {
 interface ApiCategory {
   id: number;
   name: string;
-  sub_categories?: Array<{ id: number; name: string; category_id: number }>;
+  sub_categories?: Array<{
+    id: number;
+    name: string;
+    category_id: number;
+  }>;
 }
-
 export default function CategoriesPage() {
   const navigate = useNavigate();
   const { categories, refresh, subCategories } = useReferenceData();
@@ -46,13 +48,11 @@ export default function CategoriesPage() {
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [deletingCat, setDeletingCat] = useState<ApiCategory | null>(null);
-
   const reset = () => {
     setEditingId(null);
     setName("");
     setSubs([]);
   };
-
   const startCreate = () => {
     navigate("/categories/new");
   };
@@ -74,17 +74,18 @@ export default function CategoriesPage() {
       toast.error(err.message);
     }
   };
-
   const addLocalSub = () => setSubs([...subs, { name: "" }]);
   const updateLocalSub = (idx: number, value: string) =>
     setSubs(subs.map((s, i) => (i === idx ? { ...s, name: value } : s)));
   const removeLocalSub = (idx: number) =>
     setSubs(subs.filter((_, i) => i !== idx));
-
   const submit = async () => {
     setLoading(true);
     try {
-      const payload: { name: string; sub_categories: EditableSub[] } = {
+      const payload: {
+        name: string;
+        sub_categories: EditableSub[];
+      } = {
         name,
         sub_categories: subs.filter((s) => s.name.trim() !== ""),
       };
@@ -101,7 +102,6 @@ export default function CategoriesPage() {
       setLoading(false);
     }
   };
-
   const remove = async (id: number) => {
     try {
       await api.misc.deleteCategory(id);
@@ -114,15 +114,12 @@ export default function CategoriesPage() {
       setDeletingCat(null);
     }
   };
-
   useEffect(() => {
     refresh();
   }, [refresh]);
-
   const filteredCats = categories.filter((c) =>
     c.name.toLowerCase().includes(filter.toLowerCase())
   );
-
   return (
     <Layout>
       <div className="flex items-center justify-between mb-6">

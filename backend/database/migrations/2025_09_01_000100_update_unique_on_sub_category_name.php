@@ -11,13 +11,13 @@ return new class extends Migration {
             return;
         }
 
-        // Ensure category_id exists first (earlier migration adds it)
+
         if (!Schema::hasColumn('sub_category', 'category_id')) {
             return;
         }
 
         if (DB::getDriverName() === 'sqlite') {
-            // Rebuild table to drop old unique(name) and add unique(category_id, name)
+
             Schema::rename('sub_category', 'sub_category_old_uniqfix');
             Schema::create('sub_category', function (Blueprint $table) {
                 $table->bigIncrements('id');
@@ -30,18 +30,18 @@ return new class extends Migration {
             Schema::drop('sub_category_old_uniqfix');
         } else {
             Schema::table('sub_category', function (Blueprint $table) {
-                // Drop old unique on name if exists
+
                 try {
                     $table->dropUnique('uk_sub_category_name');
                 } catch (\Throwable $e) {
-                    // ignore if not exists
+
                 }
                 try {
                     $table->dropUnique(['name']);
                 } catch (\Throwable $e) {
-                    // ignore if not exists
+
                 }
-                // Add composite unique (category_id, name)
+
                 $table->unique(['category_id', 'name'], 'uk_sub_category_cat_name');
             });
         }
@@ -69,7 +69,7 @@ return new class extends Migration {
                 try {
                     $table->dropUnique('uk_sub_category_cat_name');
                 } catch (\Throwable $e) {
-                    // ignore
+
                 }
                 $table->unique('name', 'uk_sub_category_name');
             });

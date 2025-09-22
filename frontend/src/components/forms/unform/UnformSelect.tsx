@@ -7,7 +7,6 @@ import {
   SelectValue,
   SelectContent,
 } from "@/components/ui/select";
-
 export interface UnformSelectProps {
   name: string;
   label?: string;
@@ -17,7 +16,6 @@ export interface UnformSelectProps {
   defaultValue?: string;
   onChangeValue?: (value: string) => void;
 }
-
 const UnformSelect = ({
   name,
   label,
@@ -32,7 +30,6 @@ const UnformSelect = ({
   const [value, setValue] = useState<string | undefined>(
     defaultValue || (dv as string) || undefined
   );
-
   useEffect(() => {
     registerField({
       name: fieldName,
@@ -42,7 +39,6 @@ const UnformSelect = ({
       clearValue: () => setValue(undefined),
     });
   }, [fieldName, registerField, value]);
-
   return (
     <div className="space-y-2">
       {label && (
@@ -69,5 +65,4 @@ const UnformSelect = ({
     </div>
   );
 };
-
 export default UnformSelect;

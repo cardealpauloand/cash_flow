@@ -1,31 +1,33 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
-import { Eye, EyeOff, Loader2, Mail, Lock, User } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useApp } from "@/contexts/AppContext";
+import { Eye, EyeOff, Loader2, Mail, Lock, User } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
 }
-
 export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register, isLoading } = useAuth();
   const { t } = useApp();
   const { toast } = useToast();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!name || !email || !password || !confirmPassword) {
       toast({
         title: "Erro",
@@ -34,7 +36,6 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
       });
       return;
     }
-
     if (password !== confirmPassword) {
       toast({
         title: "Erro",
@@ -43,7 +44,6 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
       });
       return;
     }
-
     if (password.length < 6) {
       toast({
         title: "Erro",
@@ -52,7 +52,6 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
       });
       return;
     }
-
     try {
       await register(name, email, password);
       toast({
@@ -62,12 +61,12 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
     } catch (error) {
       toast({
         title: "Erro no registro",
-        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado",
+        description:
+          error instanceof Error ? error.message : "Ocorreu um erro inesperado",
         variant: "destructive",
       });
     }
   };
-
   return (
     <Card className="w-full max-w-md mx-auto shadow-hover">
       <CardHeader className="text-center space-y-1">
@@ -96,7 +95,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
@@ -112,7 +111,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>
             <div className="relative">
@@ -134,7 +133,11 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
@@ -160,13 +163,17 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 disabled={isLoading}
               >
-                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
-          
-          <Button 
-            type="submit" 
+
+          <Button
+            type="submit"
             className="w-full bg-gradient-income hover:scale-105 transition-all duration-200 shadow-glow"
             disabled={isLoading}
           >
@@ -176,14 +183,14 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
                 Criando conta...
               </>
             ) : (
-              'Criar conta'
+              "Criar conta"
             )}
           </Button>
         </form>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Já tem uma conta?{' '}
+            Já tem uma conta?{" "}
             <Button
               variant="link"
               className="p-0 h-auto text-primary hover:text-primary-glow"

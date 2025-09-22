@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/contexts/AppContext";
-
 interface Transaction {
   id: string | number;
   type: "income" | "expense" | "transfer";
@@ -13,24 +12,20 @@ interface Transaction {
   account: string;
   date: string;
 }
-
 interface RecentTransactionsProps {
   transactions?: Transaction[];
   loading?: boolean;
 }
-
 const transactionIcons = {
   income: { icon: ArrowUpRight, color: "text-income" },
   expense: { icon: ArrowDownLeft, color: "text-expense" },
   transfer: { icon: ArrowLeftRight, color: "text-transfer" },
 };
-
 const transactionLabels = {
   income: "Receita",
   expense: "Despesa",
   transfer: "Transferência",
 };
-
 const mockTransactions: Transaction[] = [
   {
     id: "1",
@@ -77,20 +72,16 @@ const mockTransactions: Transaction[] = [
     date: "2024-01-11",
   },
 ];
-
 export const RecentTransactions = ({
   transactions,
   loading,
 }: RecentTransactionsProps) => {
   const { formatCurrency } = useApp();
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR");
   };
-
   const list =
     transactions && transactions.length ? transactions : mockTransactions;
-
   return (
     <Card className="shadow-card">
       <CardHeader>
@@ -111,7 +102,6 @@ export const RecentTransactions = ({
           {list.map((transaction) => {
             const { icon: Icon, color } = transactionIcons[transaction.type];
             const isNegative = transaction.amount < 0;
-
             return (
               <div
                 key={transaction.id}

@@ -18,35 +18,30 @@ import { useToast } from "@/hooks/use-toast";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, DashboardSummary } from "@/lib/api";
-
 const accountIcons = {
   corrente: CreditCard,
   poupanca: PiggyBank,
   carteira: Wallet,
   cartao: Smartphone,
 };
-
 const accountColors = {
   corrente: "bg-gradient-to-r from-blue-500 to-blue-600",
   poupanca: "bg-gradient-to-r from-green-500 to-green-600",
   carteira: "bg-gradient-to-r from-yellow-500 to-yellow-600",
   cartao: "bg-gradient-to-r from-purple-500 to-purple-600",
 };
-
 const accountLabels = {
   corrente: "Conta Corrente",
   poupanca: "Poupança",
   carteira: "Carteira",
   cartao: "Cartão de Crédito",
 };
-
 interface UiAccount {
   id: number;
   name: string;
   type: "corrente" | "poupanca" | "carteira" | "cartao";
   opening_balance?: number;
 }
-
 const AccountsPage = () => {
   const { list, create, update, remove } = useAccounts();
   const { toast } = useToast();
@@ -54,13 +49,10 @@ const AccountsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<UiAccount | null>(null);
   const { formatCurrency, t } = useApp();
-
-  // Live balances (same source as Dashboard)
   const { data: dash } = useQuery<DashboardSummary>({
     queryKey: ["dashboard", "summary"],
     queryFn: () => api.dashboard.summary(),
   });
-
   const apiAccounts: UiAccount[] = (list.data as UiAccount[]) || [];
   const balancesById = useMemo(() => {
     const map = new Map<number, number>();
@@ -76,7 +68,6 @@ const AccountsPage = () => {
       0
     );
   }, [dash, apiAccounts]);
-
   const handleNewAccount = async (account: {
     name: string;
     type: UiAccount["type"];
@@ -99,7 +90,6 @@ const AccountsPage = () => {
       });
     }
   };
-
   const handleEditAccount = (account: UiAccount) => {
     setEditingAccount({
       id: account.id,
@@ -109,7 +99,6 @@ const AccountsPage = () => {
     });
     setIsEditModalOpen(true);
   };
-
   const handleUpdateAccount = async (updatedAccount: {
     id: number;
     name: string;
@@ -137,7 +126,6 @@ const AccountsPage = () => {
       });
     }
   };
-
   const handleDelete = async (acc: UiAccount) => {
     try {
       await remove.mutateAsync(acc.id);
@@ -151,7 +139,6 @@ const AccountsPage = () => {
       });
     }
   };
-
   return (
     <Layout>
       <div className="space-y-8 animate-fade-in">
@@ -180,7 +167,6 @@ const AccountsPage = () => {
           </Dialog>
         </div>
 
-        {/* Summary Card */}
         <Card className="shadow-card bg-gradient-card hover:shadow-hover transition-all duration-300 animate-scale-in">
           <CardContent className="p-8">
             <div className="text-center">
@@ -197,14 +183,12 @@ const AccountsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Accounts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {apiAccounts.map((account) => {
             const currentBalance =
               balancesById.get(account.id) ?? account.opening_balance ?? 0;
             const Icon = accountIcons[account.type];
             const isNegative = currentBalance < 0;
-
             return (
               <Card
                 key={account.id}
@@ -260,7 +244,6 @@ const AccountsPage = () => {
           })}
         </div>
 
-        {/* Edit Account Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="max-w-2xl">
             {editingAccount && (
@@ -285,5 +268,4 @@ const AccountsPage = () => {
     </Layout>
   );
 };
-
 export default AccountsPage;

@@ -7,13 +7,11 @@ import {
   Plus,
   FolderTree,
 } from "lucide-react";
-
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/contexts/AppContext";
 import { UserMenu } from "@/components/auth/UserMenu";
-
 const navItems = [
   { icon: Home, label: "dashboard", href: "/" },
   { icon: CreditCard, label: "accounts", href: "/accounts" },
@@ -21,12 +19,9 @@ const navItems = [
   { icon: FolderTree, label: "categories", href: "/categories" },
   { icon: PieChart, label: "reports", href: "/reports" },
 ];
-
 export const Navigation = () => {
   const location = useLocation();
   const { t } = useApp();
-  
-
   return (
     <nav className="border-b shadow-card backdrop-blur-sm navbar-bg">
       <div className="container mx-auto px-4">
@@ -45,7 +40,6 @@ export const Navigation = () => {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.href;
-
                 return (
                   <Link key={item.href} to={item.href}>
                     <Button

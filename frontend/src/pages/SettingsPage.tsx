@@ -19,33 +19,25 @@ import { api } from "@/lib/api";
 import { User, Shield, Palette, Save, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/sonner";
-
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const { currency, language, setCurrency, setLanguage, t } = useApp();
   const { user, updateProfile } = useAuth();
-
-  // Estados locais para as configurações
   const [tempTheme, setTempTheme] = useState(theme);
   const [tempCurrency, setTempCurrency] = useState(currency);
   const [tempLanguage, setTempLanguage] = useState(language);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-  // Dados do formulário de perfil
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
     phone: "",
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  // Estados de troca de senha
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [pwError, setPwError] = useState<string>("");
-
-  // Carrega dados reais do usuário
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -55,7 +47,6 @@ const SettingsPage = () => {
       });
     }
   }, [user]);
-
   const saveProfile = async () => {
     if (!user) return;
     if (!profileData.name.trim()) {
@@ -76,14 +67,9 @@ const SettingsPage = () => {
       setIsSavingProfile(false);
     }
   };
-
-  // Estados dos switches
-
   const [security, setSecurity] = useState({
     sessionTimeout: true,
   });
-
-  // Função para verificar mudanças
   const checkForChanges = (
     newTheme?: string,
     newCurrency?: Currency,
@@ -92,52 +78,40 @@ const SettingsPage = () => {
     const themeChanged = (newTheme || tempTheme) !== theme;
     const currencyChanged = (newCurrency || tempCurrency) !== currency;
     const languageChanged = (newLanguage || tempLanguage) !== language;
-
     setHasUnsavedChanges(themeChanged || currencyChanged || languageChanged);
   };
-
-  // Handlers para mudanças temporárias
   const handleThemeChange = (newTheme: string) => {
     setTempTheme(newTheme as any);
     checkForChanges(newTheme, undefined, undefined);
   };
-
   const handleCurrencyChange = (newCurrency: Currency) => {
     setTempCurrency(newCurrency);
     checkForChanges(undefined, newCurrency, undefined);
   };
-
   const handleLanguageChange = (newLanguage: Language) => {
     setTempLanguage(newLanguage);
     checkForChanges(undefined, undefined, newLanguage);
   };
-
-  // Função para salvar todas as configurações
   const handleSaveChanges = () => {
     setTheme(tempTheme);
     setCurrency(tempCurrency);
     setLanguage(tempLanguage);
     setHasUnsavedChanges(false);
-
     toast.success("Configurações salvas com sucesso!", {
       description: "Todas as suas preferências foram aplicadas.",
       duration: 3000,
     });
   };
-
-  // Função para descartar mudanças
   const handleDiscardChanges = () => {
     setTempTheme(theme);
     setTempCurrency(currency);
     setTempLanguage(language);
     setHasUnsavedChanges(false);
-
     toast.info("Mudanças descartadas", {
       description: "As configurações voltaram ao estado anterior.",
       duration: 2000,
     });
   };
-
   return (
     <Layout>
       <div className="space-y-8 animate-fade-in">
@@ -150,7 +124,6 @@ const SettingsPage = () => {
           </p>
         </div>
 
-        {/* Botão de salvar fixo */}
         {hasUnsavedChanges && (
           <Card className="shadow-card bg-gradient-to-r from-primary/10 to-primary-glow/10 border-primary/20 animate-scale-in">
             <CardContent className="p-4">
@@ -184,7 +157,6 @@ const SettingsPage = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Settings */}
           <Card className="shadow-card lg:col-span-3 hover:shadow-hover transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -251,7 +223,6 @@ const SettingsPage = () => {
           </Card>
         </div>
 
-        {/* Appearance Settings */}
         <Card className="shadow-card hover:shadow-hover transition-all duration-300">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -314,7 +285,6 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Security Settings */}
         <Card className="shadow-card hover:shadow-hover transition-all duration-300">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -350,9 +320,7 @@ const SettingsPage = () => {
                   className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-              {pwError && (
-                <p className="text-sm text-destructive">{pwError}</p>
-              )}
+              {pwError && <p className="text-sm text-destructive">{pwError}</p>}
               <Button
                 type="button"
                 variant="outline"
@@ -366,7 +334,8 @@ const SettingsPage = () => {
                     return;
                   }
                   if (!newPassword || newPassword.length < 6) {
-                    const msg = "A nova senha deve ter pelo menos 6 caracteres.";
+                    const msg =
+                      "A nova senha deve ter pelo menos 6 caracteres.";
                     setPwError(msg);
                     toast.error(msg);
                     return;
@@ -379,7 +348,10 @@ const SettingsPage = () => {
                   }
                   try {
                     setIsSavingPassword(true);
-                    await api.updateMe({ password: newPassword, current_password: currentPassword });
+                    await api.updateMe({
+                      password: newPassword,
+                      current_password: currentPassword,
+                    });
                     toast.success("Senha alterada com sucesso.");
                     setCurrentPassword("");
                     setNewPassword("");
@@ -416,7 +388,6 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Botão final de salvar */}
         <div className="flex justify-center pb-8">
           <Button
             size="lg"
@@ -427,7 +398,7 @@ const SettingsPage = () => {
                 hasUnsavedChanges
                   ? "bg-gradient-primary hover:scale-105"
                   : "opacity-50 cursor-not-allowed"
-              } 
+              }
               transition-all duration-200 px-8 py-4 text-lg
             `}
           >
@@ -439,5 +410,4 @@ const SettingsPage = () => {
     </Layout>
   );
 };
-
 export default SettingsPage;

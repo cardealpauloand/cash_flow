@@ -1,7 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -35,9 +34,6 @@ import {
   ArrowLeftRight,
   Search,
   Filter,
-  Edit,
-  Trash2,
-  MoreHorizontal,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,37 +41,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { useApp } from "@/contexts/AppContext";
 import TransactionForm from "@/components/forms/TransactionForm";
 import { SubCategory as UI_SubCategory } from "@/components/forms/SubCategoryManager";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useToast } from "@/hooks/use-toast";
 import { InstallmentListItem, api } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import TransactionsTable from "@/components/TransactionsTable";
-
-const transactionIcons = {
-  income: { icon: ArrowUpRight, color: "text-income" },
-  expense: { icon: ArrowDownLeft, color: "text-expense" },
-  transfer: { icon: ArrowLeftRight, color: "text-transfer" },
-};
-
-const transactionLabels = {
-  income: "income",
-  expense: "expense",
-  transfer: "transfer",
-} as const;
-
-// Map transaction_type_id to logical type (assumindo 1=income,2=expense,3=transfer / ajustar se diferente)
 function mapType(id: number): "income" | "expense" | "transfer" {
   if (id === 1) return "income";
   if (id === 2) return "expense";
   return "transfer";
 }
-
 const TransactionsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -83,8 +63,9 @@ const TransactionsPage = () => {
   const [deletingTx, setDeletingTx] = useState<InstallmentListItem | null>(
     null
   );
-  const [newTxType, setNewTxType] = useState<"income" | "expense" | "transfer" | null>(null);
-
+  const [newTxType, setNewTxType] = useState<
+    "income" | "expense" | "transfer" | null
+  >(null);
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [accountFilter, setAccountFilter] = useState<number | undefined>();
   const [page, setPage] = useState(1);
@@ -92,11 +73,9 @@ const TransactionsPage = () => {
   const tx = useTransactions(filters);
   const accounts = useAccounts();
   const { toast } = useToast();
-
   const { formatCurrency, t } = useApp();
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("pt-BR");
-
   const installments = tx.list.data?.data || [];
   const incomeTotal = installments
     .filter((i) => mapType(i.transaction_type_id) === "income")
@@ -104,7 +83,6 @@ const TransactionsPage = () => {
   const expenseTotal = installments
     .filter((i) => mapType(i.transaction_type_id) === "expense")
     .reduce((s, i) => s + i.value, 0);
-
   interface NewTransactionForm {
     type: "income" | "expense" | "transfer";
     amount: string | number;
@@ -114,7 +92,6 @@ const TransactionsPage = () => {
     account_out_id?: number;
     description?: string;
   }
-
   interface FormSubmitPayload {
     type: string;
     amount: number | string;
@@ -123,19 +100,24 @@ const TransactionsPage = () => {
     account?: number | string;
     account_out_id?: number | string;
     description?: string;
-    category?: string; // formato: "c:<catId>" ou "s:<catId>:<subId>"
+    category?: string;
     subCategories?: UI_SubCategory[];
     tags?: string[];
-    installments_count?: number; // novo
+    installments_count?: number;
   }
-  const parseCategoryValue = (val?: string): { category_id?: number; sub_category_id?: number } => {
+  const parseCategoryValue = (
+    val?: string
+  ): {
+    category_id?: number;
+    sub_category_id?: number;
+  } => {
     if (!val) return {};
-    if (val.startsWith('c:')) {
-      const c = Number(val.split(':')[1]);
+    if (val.startsWith("c:")) {
+      const c = Number(val.split(":")[1]);
       return { category_id: Number.isNaN(c) ? undefined : c };
     }
-    if (val.startsWith('s:')) {
-      const parts = val.split(':');
+    if (val.startsWith("s:")) {
+      const parts = val.split(":");
       const c = Number(parts[1]);
       const s = Number(parts[2]);
       return {
@@ -143,7 +125,6 @@ const TransactionsPage = () => {
         sub_category_id: Number.isNaN(s) ? undefined : s,
       };
     }
-    // fallback antigo (id puro)
     const c = Number(val);
     return { category_id: Number.isNaN(c) ? undefined : c };
   };
@@ -155,8 +136,9 @@ const TransactionsPage = () => {
         category_id: sc.categoryId,
         sub_category_id: sc.subCategoryId,
       }));
-      const { category_id, sub_category_id } =
-        !subs.length ? parseCategoryValue(form.category) : {};
+      const { category_id, sub_category_id } = !subs.length
+        ? parseCategoryValue(form.category)
+        : {};
       await tx.create.mutateAsync({
         transaction_type: type,
         value: Number(form.amount),
@@ -175,7 +157,7 @@ const TransactionsPage = () => {
       });
       toast({ title: "Transação criada" });
       setIsModalOpen(false);
-  setNewTxType(null);
+      setNewTxType(null);
     } catch (e) {
       const err = e as Error;
       toast({
@@ -185,12 +167,10 @@ const TransactionsPage = () => {
       });
     }
   };
-
   const handleEditTransaction = (installment: InstallmentListItem) => {
     setEditingTx(installment);
     setIsEditModalOpen(true);
   };
-
   const qc = useQueryClient();
   const handleUpdateTransaction = async (form: FormSubmitPayload) => {
     if (!editingTx) return;
@@ -201,14 +181,16 @@ const TransactionsPage = () => {
         category_id: sc.categoryId,
         sub_category_id: sc.subCategoryId,
       }));
-      const { category_id, sub_category_id } =
-        !subs.length ? parseCategoryValue(form.category) : {};
+      const { category_id, sub_category_id } = !subs.length
+        ? parseCategoryValue(form.category)
+        : {};
       await api.transactions.update(editingTx.transaction_id, {
         transaction_type: type,
         value: Number(form.amount),
         date: form.date || new Date().toISOString().slice(0, 10),
         account_id: Number(form.account_id || form.account),
-        account_out_id: type === "transfer" ? Number(form.account_out_id) : undefined,
+        account_out_id:
+          type === "transfer" ? Number(form.account_out_id) : undefined,
         notes: form.description,
         category_id,
         sub_category_id,
@@ -218,25 +200,32 @@ const TransactionsPage = () => {
             ? form.installments_count
             : undefined,
       });
-  // Invalidate queries to refresh lists and summaries
-  qc.invalidateQueries({ queryKey: ["transactions"] });
-  qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
-  qc.invalidateQueries({ queryKey: ["reports", "summary"] });
+      qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["dashboard", "summary"] });
+      qc.invalidateQueries({ queryKey: ["reports", "summary"] });
       toast({ title: "Transação atualizada" });
       setIsEditModalOpen(false);
       setEditingTx(null);
     } catch (e) {
       const err = e as Error;
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: err.message,
+        variant: "destructive",
+      });
     }
   };
-
   const handleDeleteTransaction = async (transaction: InstallmentListItem) => {
     try {
-  const isTransfer = mapType(transaction.root_transaction_type_id) === "transfer";
-  const idToDelete = isTransfer ? transaction.transaction_id : transaction.id;
-  await tx.remove.mutateAsync(idToDelete);
-  toast({ title: isTransfer ? "Transferência removida" : "Transação removida" });
+      const isTransfer =
+        mapType(transaction.root_transaction_type_id) === "transfer";
+      const idToDelete = isTransfer
+        ? transaction.transaction_id
+        : transaction.id;
+      await tx.remove.mutateAsync(idToDelete);
+      toast({
+        title: isTransfer ? "Transferência removida" : "Transação removida",
+      });
     } catch (e) {
       const err = e as Error;
       toast({
@@ -247,9 +236,6 @@ const TransactionsPage = () => {
     }
     setDeletingTx(null);
   };
-
-  // (removed) auto-open by URL; now handled by dropdown on New Transaction button
-
   return (
     <Layout>
       <div className="space-y-8 animate-fade-in">
@@ -271,13 +257,28 @@ const TransactionsPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" sideOffset={6}>
-                <DropdownMenuItem onClick={() => { setNewTxType("expense"); setIsModalOpen(true); }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setNewTxType("expense");
+                    setIsModalOpen(true);
+                  }}
+                >
                   {t("expense")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setNewTxType("transfer"); setIsModalOpen(true); }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setNewTxType("transfer");
+                    setIsModalOpen(true);
+                  }}
+                >
                   {t("transfer")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setNewTxType("income"); setIsModalOpen(true); }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setNewTxType("income");
+                    setIsModalOpen(true);
+                  }}
+                >
                   {t("income")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -306,9 +307,27 @@ const TransactionsPage = () => {
                 <TransactionForm
                   onSubmit={handleNewTransaction}
                   onCancel={() => setIsModalOpen(false)}
-                  initialData={newTxType ? { type: newTxType, amount: 0, description: "", account: "", date: new Date().toISOString().slice(0,10) } as any : undefined}
+                  initialData={
+                    newTxType
+                      ? ({
+                          type: newTxType,
+                          amount: 0,
+                          description: "",
+                          account: "",
+                          date: new Date().toISOString().slice(0, 10),
+                        } as any)
+                      : undefined
+                  }
                   forcedType={newTxType ?? undefined}
-                  titleOverride={newTxType === "income" ? "Nova Receita" : newTxType === "expense" ? "Nova Despesa" : newTxType === "transfer" ? "Nova Transferência" : undefined}
+                  titleOverride={
+                    newTxType === "income"
+                      ? "Nova Receita"
+                      : newTxType === "expense"
+                      ? "Nova Despesa"
+                      : newTxType === "transfer"
+                      ? "Nova Transferência"
+                      : undefined
+                  }
                 />
               </DialogContent>
             )}
@@ -339,10 +358,13 @@ const TransactionsPage = () => {
                     type: mapType(editingTx.root_transaction_type_id),
                     description: editingTx.notes || "",
                     amount: editingTx.value,
-                    account: String(editingTx.root_account_id || editingTx.account_id),
-                    account_out_id: editingTx.account_out_id ? String(editingTx.account_out_id) : undefined,
+                    account: String(
+                      editingTx.root_account_id || editingTx.account_id
+                    ),
+                    account_out_id: editingTx.account_out_id
+                      ? String(editingTx.account_out_id)
+                      : undefined,
                     date: editingTx.date,
-                    // Se houver subs, mapear para UI_SubCategory
                     subCategories: editingTx.subs?.length
                       ? editingTx.subs.map((s) => ({
                           id: String(s.id),
@@ -351,16 +373,13 @@ const TransactionsPage = () => {
                           subCategoryId: s.sub_category_id ?? undefined,
                         }))
                       : undefined,
-                    // Categoria simples apenas se não houver múltiplos subs (ou seja, exatamente 1 com category)
                     category:
                       editingTx.subs &&
                       editingTx.subs.length === 1 &&
                       editingTx.subs[0].category_id
-                        ? (
-                            editingTx.subs[0].sub_category_id
-                              ? `s:${editingTx.subs[0].category_id}:${editingTx.subs[0].sub_category_id}`
-                              : `c:${editingTx.subs[0].category_id}`
-                          )
+                        ? editingTx.subs[0].sub_category_id
+                          ? `s:${editingTx.subs[0].category_id}:${editingTx.subs[0].sub_category_id}`
+                          : `c:${editingTx.subs[0].category_id}`
                         : undefined,
                   }}
                   isEditing
@@ -378,33 +397,36 @@ const TransactionsPage = () => {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                {mapType(deletingTx.root_transaction_type_id) === "transfer" ? (
-                  <AlertDialogDescription>
-                    Tem certeza que deseja excluir a transferência inteira? Isso removerá as duas movimentações (entrada e saída). Esta ação não pode ser desfeita.
-                  </AlertDialogDescription>
-                ) : (
-                  <AlertDialogDescription>
-                    Tem certeza que deseja excluir a parcela #{deletingTx?.id}? Esta ação não pode ser desfeita.
-                  </AlertDialogDescription>
-                )}
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() =>
-                    deletingTx && handleDeleteTransaction(deletingTx)
-                  }
-                  className="bg-destructive hover:bg-destructive/90"
-                >
-                  Excluir
-                </AlertDialogAction>
-              </AlertDialogFooter>
+                  {mapType(deletingTx.root_transaction_type_id) ===
+                  "transfer" ? (
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir a transferência inteira?
+                      Isso removerá as duas movimentações (entrada e saída).
+                      Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  ) : (
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir a parcela #{deletingTx?.id}
+                      ? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  )}
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() =>
+                      deletingTx && handleDeleteTransaction(deletingTx)
+                    }
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
               </AlertDialogContent>
             )}
           </AlertDialog>
         </div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="shadow-card bg-gradient-to-br from-income/10 to-income/5 border-income/20 hover:shadow-hover transition-all duration-300 animate-scale-in">
             <CardContent className="p-6 text-center">
@@ -441,7 +463,6 @@ const TransactionsPage = () => {
           </Card>
         </div>
 
-        {/* Filters */}
         <Card className="shadow-card hover:shadow-hover transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -496,7 +517,6 @@ const TransactionsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Transactions List */}
         <TransactionsTable
           installments={installments}
           accounts={accounts.list.data || []}
@@ -510,5 +530,4 @@ const TransactionsPage = () => {
     </Layout>
   );
 };
-
 export default TransactionsPage;

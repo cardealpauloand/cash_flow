@@ -54,7 +54,7 @@ class CategoryController extends Controller
     {
         $data = $request->validate([
             'name' => 'sometimes|required|string|max:120|unique:category,name,' . $category->id,
-            'sub_categories' => 'array', // full replacement list optional
+            'sub_categories' => 'array',
             'sub_categories.*.id' => 'sometimes|integer|exists:sub_category,id',
             'sub_categories.*.name' => 'required_with:sub_categories|string|max:120|distinct',
         ]);
@@ -63,10 +63,10 @@ class CategoryController extends Controller
                 $category->update(['name' => $data['name']]);
             }
             if (array_key_exists('sub_categories', $data)) {
-                // Strategy: send full desired list; create/update/delete to match
+
                 $incoming = collect($data['sub_categories']);
                 $existing = $category->subCategories()->get();
-                // Update or create
+
                 foreach ($incoming as $row) {
                     if (!empty($row['id'])) {
                         $sc = $existing->firstWhere('id', $row['id']);
@@ -77,7 +77,7 @@ class CategoryController extends Controller
                         SubCategory::create(['name' => $row['name'], 'category_id' => $category->id]);
                     }
                 }
-                // Delete removed
+
                 $incomingIds = $incoming->pluck('id')->filter()->values()->all();
                 foreach ($existing as $sc) {
                     if (!in_array($sc->id, $incomingIds)) {

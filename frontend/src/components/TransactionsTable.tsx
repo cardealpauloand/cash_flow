@@ -18,36 +18,33 @@ import {
 import { cn } from "@/lib/utils";
 import { InstallmentListItem } from "@/lib/api";
 import { useMemo } from "react";
-
-// Map transaction_type_id to logical type
 function mapType(id: number): "income" | "expense" | "transfer" {
   if (id === 1) return "income";
   if (id === 2) return "expense";
   return "transfer";
 }
-
 const transactionIcons = {
   income: { icon: ArrowUpRight, color: "text-income" },
   expense: { icon: ArrowDownLeft, color: "text-expense" },
   transfer: { icon: ArrowLeftRight, color: "text-transfer" },
 };
-
 const transactionLabels = {
   income: "income",
   expense: "expense",
   transfer: "transfer",
 } as const;
-
 interface TransactionsTableProps {
   installments: InstallmentListItem[];
-  accounts: { id: number; name: string }[];
+  accounts: {
+    id: number;
+    name: string;
+  }[];
   formatCurrency: (value: number) => string;
   t: (key: string) => string;
   formatDate: (date: string) => string;
   onEdit: (inst: InstallmentListItem) => void;
   onDelete: (inst: InstallmentListItem) => void;
 }
-
 export const TransactionsTable = ({
   installments,
   accounts,
@@ -57,7 +54,6 @@ export const TransactionsTable = ({
   onEdit,
   onDelete,
 }: TransactionsTableProps) => {
-  // Build display list: collapse transfer installments to a single row per transaction
   const displayInstallments = useMemo(() => {
     const result: InstallmentListItem[] = [];
     const seenTransferTx = new Set<number>();
@@ -65,9 +61,10 @@ export const TransactionsTable = ({
       const rootType = mapType(inst.root_transaction_type_id);
       if (rootType === "transfer") {
         if (seenTransferTx.has(inst.transaction_id)) continue;
-        // Prefer the income side to represent the transfer (value is the same)
         const pair = installments.find(
-          (i) => i.transaction_id === inst.transaction_id && mapType(i.transaction_type_id) === "income"
+          (i) =>
+            i.transaction_id === inst.transaction_id &&
+            mapType(i.transaction_type_id) === "income"
         );
         const chosen = pair || inst;
         result.push(chosen);
@@ -78,7 +75,6 @@ export const TransactionsTable = ({
     }
     return result;
   }, [installments]);
-
   return (
     <Card className="shadow-card hover:shadow-hover transition-all duration-300">
       <CardHeader>
@@ -87,7 +83,8 @@ export const TransactionsTable = ({
       <CardContent>
         <div className="space-y-4">
           {displayInstallments.map((inst) => {
-            const isRootTransfer = mapType(inst.root_transaction_type_id) === "transfer";
+            const isRootTransfer =
+              mapType(inst.root_transaction_type_id) === "transfer";
             const logicalType = isRootTransfer
               ? ("transfer" as const)
               : mapType(inst.transaction_type_id);
@@ -116,15 +113,19 @@ export const TransactionsTable = ({
                       {logicalType === "transfer" ? (
                         <span>
                           {`${
-                            accounts.find((a) => a.id === (inst.account_out_id ?? -1))?.name || "Conta origem"
+                            accounts.find(
+                              (a) => a.id === (inst.account_out_id ?? -1)
+                            )?.name || "Conta origem"
                           } -> ${
-                            accounts.find((a) => a.id === (inst.root_account_id ?? -1))?.name || "Conta destino"
+                            accounts.find(
+                              (a) => a.id === (inst.root_account_id ?? -1)
+                            )?.name || "Conta destino"
                           }`}
                         </span>
                       ) : (
                         <span>
-                          {accounts.find((a) => a.id === inst.account_id)?.name ||
-                            "Conta"}
+                          {accounts.find((a) => a.id === inst.account_id)
+                            ?.name || "Conta"}
                         </span>
                       )}
                       <span>•</span>
@@ -191,5 +192,4 @@ export const TransactionsTable = ({
     </Card>
   );
 };
-
 export default TransactionsTable;

@@ -37,36 +37,28 @@ import { useQuery } from "@tanstack/react-query";
 import { api, ReportsSummary } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon, RefreshCcw } from "lucide-react";
-
 const ReportsPage = () => {
   const { formatCurrency } = useApp();
   const [period, setPeriod] = useState<"1m" | "3m" | "6m" | "1y">("6m");
-
   const { dateFrom, dateTo } = useMemo(() => {
     const now = new Date();
-    // Helper to format YYYY-MM-DD in local time (avoids UTC shift bugs)
     const fmt = (d: Date) => {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
       return `${y}-${m}-${day}`;
     };
-
     let start = new Date(now.getFullYear(), now.getMonth(), 1);
-    let end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // end of current month
-
-  if (period === "3m") {
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    if (period === "3m") {
       start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-      // end remains end of current month
     } else if (period === "6m") {
       start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
     } else if (period === "1y") {
       start = new Date(now.getFullYear() - 1, now.getMonth(), 1);
     }
-
     return { dateFrom: fmt(start), dateTo: fmt(end) };
   }, [period]);
-
   const query = useQuery<
     ReportsSummary,
     Error,
@@ -78,8 +70,6 @@ const ReportsPage = () => {
       api.reports.summary({ date_from: dateFrom, date_to: dateTo }),
     refetchOnWindowFocus: false,
   });
-
-  // Separate 6-month trend for the line chart so it isn't static on 1m
   const { trendFrom, trendTo } = useMemo(() => {
     const now = new Date();
     const fmt = (d: Date) => {
@@ -92,7 +82,6 @@ const ReportsPage = () => {
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     return { trendFrom: fmt(start), trendTo: fmt(end) };
   }, []);
-
   const trendQuery = useQuery<
     ReportsSummary,
     Error,
@@ -100,10 +89,10 @@ const ReportsPage = () => {
     [string, string, string, string, string]
   >({
     queryKey: ["reports", "summary", "trend", trendFrom, trendTo],
-    queryFn: () => api.reports.summary({ date_from: trendFrom, date_to: trendTo }),
+    queryFn: () =>
+      api.reports.summary({ date_from: trendFrom, date_to: trendTo }),
     refetchOnWindowFocus: false,
   });
-
   const data = query.data;
   const monthlyData = (trendQuery.data?.monthly || []).map((m) => {
     const [year, mon] = m.month.split("-");
@@ -120,8 +109,6 @@ const ReportsPage = () => {
     name: c.name,
     value: c.value,
   }));
-
-  // Soft, balanced palette for pie slices (non-neon)
   const softPalette = [
     "#4C78A8",
     "#F58518",
@@ -136,16 +123,13 @@ const ReportsPage = () => {
     "#6C9BD2",
     "#8CD17D",
   ];
-
   const totalReceitas = data?.totals.income || 0;
   const totalDespesas = data?.totals.expenses || 0;
   const saldoLiquido = data?.totals.net || 0;
-
-  // Render pie labels outside with a custom pointer line aligned to the text
   const RADIAN = Math.PI / 180;
   const renderPieLabel = (props: any) => {
-    const { cx, cy, midAngle, outerRadius, percent, index, name, value } = props;
-    // Guard: render nothing for invalid/empty values
+    const { cx, cy, midAngle, outerRadius, percent, index, name, value } =
+      props;
     if (
       !Number.isFinite(cx) ||
       !Number.isFinite(cy) ||
@@ -166,7 +150,6 @@ const ReportsPage = () => {
     const ey = my;
     const textAnchor = cos >= 0 ? "start" : "end";
     const label = `${name} ${(percent * 100).toFixed(0)}%`;
-
     return (
       <g>
         <path
@@ -187,7 +170,6 @@ const ReportsPage = () => {
       </g>
     );
   };
-
   return (
     <Layout>
       <div className="space-y-6">
@@ -232,7 +214,6 @@ const ReportsPage = () => {
           </div>
         )}
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="shadow-card bg-gradient-to-br from-income/10 to-income/5">
             <CardContent className="p-6">
@@ -281,7 +262,6 @@ const ReportsPage = () => {
           </Card>
         </div>
 
-        {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="shadow-card">
             <CardHeader>
@@ -297,27 +277,91 @@ const ReportsPage = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={monthlyData} margin={{ top: 16, right: 24, bottom: 32, left: 56 }}>
+                <LineChart
+                  data={monthlyData}
+                  margin={{ top: 16, right: 24, bottom: 32, left: 56 }}
+                >
                   <defs>
-                    <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="blur" />
+                    <filter
+                      id="lineGlow"
+                      x="-50%"
+                      y="-50%"
+                      width="200%"
+                      height="200%"
+                    >
+                      <feGaussianBlur
+                        in="SourceGraphic"
+                        stdDeviation="2.2"
+                        result="blur"
+                      />
                       <feMerge>
                         <feMergeNode in="blur" />
                         <feMergeNode in="SourceGraphic" />
                       </feMerge>
                     </filter>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="month" className="text-muted-foreground" tickMargin={12} tickLine={false} axisLine={false} />
-                  <YAxis className="text-muted-foreground" tickFormatter={(v) => `R$ ${v}`} tickMargin={8} width={64} tickLine={false} axisLine={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-muted"
+                  />
+                  <XAxis
+                    dataKey="month"
+                    className="text-muted-foreground"
+                    tickMargin={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    className="text-muted-foreground"
+                    tickFormatter={(v) => `R$ ${v}`}
+                    tickMargin={8}
+                    width={64}
+                    tickLine={false}
+                    axisLine={false}
+                  />
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
                   />
-                  <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-                  <Line type="monotone" dataKey="receitas" stroke="hsl(var(--income))" strokeWidth={2.5} dot={{ r: 2, stroke: "transparent" }} activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }} style={{ filter: "url(#lineGlow)" }} name="Receitas" />
-                  <Line type="monotone" dataKey="despesas" stroke="hsl(var(--expense))" strokeWidth={2.5} dot={{ r: 2, stroke: "transparent" }} activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }} style={{ filter: "url(#lineGlow)" }} name="Despesas" />
-                  <Line type="monotone" dataKey="liquido" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 2, stroke: "transparent" }} activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }} style={{ filter: "url(#lineGlow)" }} name="Saldo Líquido" />
+                  <ReferenceLine
+                    y={0}
+                    stroke="hsl(var(--muted-foreground))"
+                    strokeDasharray="3 3"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="receitas"
+                    stroke="hsl(var(--income))"
+                    strokeWidth={2.5}
+                    dot={{ r: 2, stroke: "transparent" }}
+                    activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }}
+                    style={{ filter: "url(#lineGlow)" }}
+                    name="Receitas"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="despesas"
+                    stroke="hsl(var(--expense))"
+                    strokeWidth={2.5}
+                    dot={{ r: 2, stroke: "transparent" }}
+                    activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }}
+                    style={{ filter: "url(#lineGlow)" }}
+                    name="Despesas"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="liquido"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2.5}
+                    dot={{ r: 2, stroke: "transparent" }}
+                    activeDot={{ r: 5, style: { filter: "url(#lineGlow)" } }}
+                    style={{ filter: "url(#lineGlow)" }}
+                    name="Saldo Líquido"
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -347,10 +391,10 @@ const ReportsPage = () => {
                     isAnimationActive={false}
                     paddingAngle={0}
                   >
-          {categoryData.map((entry, index) => (
+                    {categoryData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-            fill={softPalette[index % softPalette.length]}
+                        fill={softPalette[index % softPalette.length]}
                       />
                     ))}
                   </Pie>
@@ -406,5 +450,4 @@ const ReportsPage = () => {
     </Layout>
   );
 };
-
 export default ReportsPage;

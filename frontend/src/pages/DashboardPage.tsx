@@ -1,6 +1,5 @@
 import { Layout } from "@/components/Layout";
 import { Dashboard } from "@/components/dashboard/Dashboard";
-
 const DashboardPage = () => {
   return (
     <Layout>
@@ -8,5 +7,4 @@ const DashboardPage = () => {
     </Layout>
   );
 };
-
 export default DashboardPage;

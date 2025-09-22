@@ -1,30 +1,32 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { useApp } from '@/contexts/AppContext';
-import { Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useApp } from "@/contexts/AppContext";
+import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 interface LoginFormProps {
   onSwitchToRegister: () => void;
 }
-
 export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading } = useAuth();
   const { t } = useApp();
   const { toast } = useToast();
   const navigate = useNavigate();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!email || !password) {
       toast({
         title: "Erro",
@@ -33,24 +35,22 @@ export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
       });
       return;
     }
-
     try {
       await login(email, password);
       toast({
         title: "Sucesso!",
         description: "Login realizado com sucesso",
       });
-      // Redirecionar para a página inicial após login bem-sucedido
-      navigate('/');
+      navigate("/");
     } catch (error) {
       toast({
         title: "Erro no login",
-        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado",
+        description:
+          error instanceof Error ? error.message : "Ocorreu um erro inesperado",
         variant: "destructive",
       });
     }
   };
-
   return (
     <Card className="w-full max-w-md mx-auto shadow-hover">
       <CardHeader className="text-center space-y-1">
@@ -100,13 +100,17 @@ export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
-          
-          <Button 
-            type="submit" 
+
+          <Button
+            type="submit"
             className="w-full bg-gradient-primary hover:scale-105 transition-all duration-200 shadow-glow"
             disabled={isLoading}
           >
@@ -116,14 +120,14 @@ export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
                 Entrando...
               </>
             ) : (
-              'Entrar'
+              "Entrar"
             )}
           </Button>
         </form>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Não tem uma conta?{' '}
+            Não tem uma conta?{" "}
             <Button
               variant="link"
               className="p-0 h-auto text-primary hover:text-primary-glow"

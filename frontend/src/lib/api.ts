@@ -1,17 +1,13 @@
-// Simple API client using fetch with JWT token from localStorage
 export interface ApiOptions<B = unknown> {
   method?: string;
   body?: B;
   headers?: Record<string, string>;
-  auth?: boolean; // include Authorization header
+  auth?: boolean;
 }
-
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-
 function getToken() {
   return localStorage.getItem("cashflow-token");
 }
-
 async function request<T = unknown, B = unknown>(
   path: string,
   options: ApiOptions<B> = {}
@@ -39,13 +35,15 @@ async function request<T = unknown, B = unknown>(
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // Try to extract standardized message field (Laravel validation aware)
     let message = (data && (data.message || data.error)) as string | undefined;
-    if (!message && data && typeof data === 'object' && 'errors' in data) {
+    if (!message && data && typeof data === "object" && "errors" in data) {
       try {
         const errors = (data as any).errors;
         const firstKey = Object.keys(errors || {})[0];
-        const firstMsg = firstKey && Array.isArray(errors[firstKey]) ? errors[firstKey][0] : undefined;
+        const firstMsg =
+          firstKey && Array.isArray(errors[firstKey])
+            ? errors[firstKey][0]
+            : undefined;
         if (firstMsg) message = String(firstMsg);
       } catch {}
     }
@@ -54,8 +52,6 @@ async function request<T = unknown, B = unknown>(
   }
   return data as T;
 }
-
-// Domain types
 export interface ApiUser {
   id: number;
   name: string;
@@ -80,20 +76,18 @@ export interface Paginated<T> {
   data: T[];
   current_page: number;
   last_page: number;
-  // Optional fields commonly returned by Laravel's paginator
   total?: number;
   per_page?: number | string;
   from?: number | null;
   to?: number | null;
 }
-// Agora a listagem baseia-se em parcelas (installments)
 export interface InstallmentListItem {
   id: number;
   value: number;
-  transaction_type_id: number; // tipo da parcela
+  transaction_type_id: number;
   account_id: number;
   transaction_id: number;
-  date: string; // data da transação raiz
+  date: string;
   root_transaction_type_id: number;
   account_out_id?: number | null;
   root_account_id?: number | null;
@@ -104,7 +98,9 @@ export interface InstallmentListItem {
     category_id?: number | null;
     sub_category_id?: number | null;
   }>;
-  tags: Array<{ id: number }>;
+  tags: Array<{
+    id: number;
+  }>;
 }
 export interface TransactionCreateResponse {
   transaction_id: number;
@@ -126,8 +122,7 @@ export interface TransactionCreatePayload {
     category_id: number;
     sub_category_id: number;
   }>;
-  // Novo campo para parcelamento automático no backend
-  installments_count?: number; // quando >1 backend cria N parcelas iguais (ajustando última)
+  installments_count?: number;
 }
 export interface DashboardSummary {
   total_balance: number;
@@ -161,25 +156,43 @@ export interface ReportsSummary {
     expenses: number;
     net: number;
   }>;
-  categories: Array<{ name: string; value: number; percentage: number }>;
-  totals: { income: number; expenses: number; net: number };
+  categories: Array<{
+    name: string;
+    value: number;
+    percentage: number;
+  }>;
+  totals: {
+    income: number;
+    expenses: number;
+    net: number;
+  };
 }
-
 export const api = {
   setToken(token: string | null) {
     if (token) localStorage.setItem("cashflow-token", token);
     else localStorage.removeItem("cashflow-token");
   },
   login(email: string, password: string) {
-    return request<AuthResponse, { email: string; password: string }>(
-      `/auth/login`,
-      { method: "POST", body: { email, password }, auth: false }
-    );
+    return request<
+      AuthResponse,
+      {
+        email: string;
+        password: string;
+      }
+    >(`/auth/login`, {
+      method: "POST",
+      body: { email, password },
+      auth: false,
+    });
   },
   register(name: string, email: string, password: string) {
     return request<
       AuthResponse,
-      { name: string; email: string; password: string }
+      {
+        name: string;
+        email: string;
+        password: string;
+      }
     >(`/auth/register`, {
       method: "POST",
       body: { name, email, password },
@@ -215,8 +228,14 @@ export const api = {
       return request<AccountResponse[]>(`/accounts`);
     },
     count() {
-      return request<{ count: number }>(`/accounts`)
-        .then((list) => ({ count: Array.isArray(list as any) ? (list as any).length : 0 } as any));
+      return request<{
+        count: number;
+      }>(`/accounts`).then(
+        (list) =>
+          ({
+            count: Array.isArray(list as any) ? (list as any).length : 0,
+          } as any)
+      );
     },
     create(data: AccountPayload) {
       return request<AccountResponse, AccountPayload>(`/accounts`, {
@@ -231,7 +250,9 @@ export const api = {
       );
     },
     delete(id: number) {
-      return request<{ deleted: boolean }>(`/accounts/${id}`, {
+      return request<{
+        deleted: boolean;
+      }>(`/accounts/${id}`, {
         method: "DELETE",
       });
     },
@@ -254,19 +275,25 @@ export const api = {
       );
     },
     update(id: number, data: TransactionCreatePayload) {
-      return request<{ updated: boolean }, TransactionCreatePayload>(
-        `/transactions/${id}`,
-        { method: "PUT", body: data }
-      );
+      return request<
+        {
+          updated: boolean;
+        },
+        TransactionCreatePayload
+      >(`/transactions/${id}`, { method: "PUT", body: data });
     },
     delete(id: number) {
-      return request<{ deleted: boolean }>(`/transactions/${id}`, {
+      return request<{
+        deleted: boolean;
+      }>(`/transactions/${id}`, {
         method: "DELETE",
       });
     },
     count(params?: { date_from?: string; date_to?: string }) {
       const query = params ? `?${new URLSearchParams(params as any)}` : "";
-      return request<{ count: number }>(`/transactions/count${query}`);
+      return request<{
+        count: number;
+      }>(`/transactions/count${query}`);
     },
   },
   dashboard: {
@@ -295,42 +322,82 @@ export const api = {
             ][]
           )}`
         : "";
-      return request<Array<{ id: number; name: string }>>(
-        `/categories${query}`
-      );
+      return request<
+        Array<{
+          id: number;
+          name: string;
+        }>
+      >(`/categories${query}`);
     },
     createCategory(data: {
       name: string;
-      sub_categories?: Array<{ id?: number; name: string }>;
+      sub_categories?: Array<{
+        id?: number;
+        name: string;
+      }>;
     }) {
       return request<
-        { id: number; name: string },
-        { name: string; sub_categories?: Array<{ id?: number; name: string }> }
+        {
+          id: number;
+          name: string;
+        },
+        {
+          name: string;
+          sub_categories?: Array<{
+            id?: number;
+            name: string;
+          }>;
+        }
       >(`/categories`, { method: "POST", body: data });
     },
     updateCategory(
       id: number,
-      data: { name?: string; sub_categories?: Array<{ id?: number; name: string }> }
+      data: {
+        name?: string;
+        sub_categories?: Array<{
+          id?: number;
+          name: string;
+        }>;
+      }
     ) {
       return request<
-        { id: number; name: string },
-        { name?: string; sub_categories?: Array<{ id?: number; name: string }> }
+        {
+          id: number;
+          name: string;
+        },
+        {
+          name?: string;
+          sub_categories?: Array<{
+            id?: number;
+            name: string;
+          }>;
+        }
       >(`/categories/${id}`, { method: "PUT", body: data });
     },
     deleteCategory(id: number) {
-      return request<{ deleted: boolean }>(`/categories/${id}`, {
+      return request<{
+        deleted: boolean;
+      }>(`/categories/${id}`, {
         method: "DELETE",
       });
     },
     subCategories() {
-      return request<Array<{ id: number; name: string; category_id?: number | null }>>(
-        "/sub-categories"
-      );
+      return request<
+        Array<{
+          id: number;
+          name: string;
+          category_id?: number | null;
+        }>
+      >("/sub-categories");
     },
     tags() {
-      return request<Array<{ id: number; name: string }>>("/tags");
+      return request<
+        Array<{
+          id: number;
+          name: string;
+        }>
+      >("/tags");
     },
   },
 };
-
 export { request };

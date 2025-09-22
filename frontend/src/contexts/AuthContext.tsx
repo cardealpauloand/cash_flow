@@ -7,15 +7,13 @@ import {
   useCallback,
 } from "react";
 import { api, AuthResponse, ApiUser } from "@/lib/api";
-
 export interface User {
-  id: string; // keep string for UI simplicity
+  id: string;
   name: string;
   email: string;
   phone?: string | null;
   avatar?: string;
 }
-
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -27,44 +25,37 @@ interface AuthContextType {
     name?: string;
     email?: string;
     phone?: string | null;
-  }) => Promise<void>; // atualiza dados do usuário
+  }) => Promise<void>;
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 interface AuthProviderProps {
   children: ReactNode;
 }
-
 const USER_KEY = "cashflow-user";
 const TOKEN_KEY = "cashflow-token";
-
-function mapUser(u: ApiUser & { phone?: string | null }): User {
+function mapUser(
+  u: ApiUser & {
+    phone?: string | null;
+  }
+): User {
   return { id: String(u.id), name: u.name, email: u.email, phone: u.phone };
 }
-
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };
-
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Bootstrap auth state
   useEffect(() => {
     const storedUser = localStorage.getItem(USER_KEY);
     const token = localStorage.getItem(TOKEN_KEY);
     if (storedUser && token) {
       try {
         setUser(JSON.parse(storedUser));
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     }
-    // Try refresh user from API if token exists
     (async () => {
       if (token) {
         try {
@@ -73,7 +64,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(mapped);
           localStorage.setItem(USER_KEY, JSON.stringify(mapped));
         } catch {
-          // token invalid
           api.setToken(null);
           localStorage.removeItem(USER_KEY);
         }
@@ -81,14 +71,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false);
     })();
   }, []);
-
   const persistAuth = (res: AuthResponse) => {
     api.setToken(res.token);
     const mapped = mapUser(res.user);
     setUser(mapped);
     localStorage.setItem(USER_KEY, JSON.stringify(mapped));
   };
-
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -98,7 +86,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false);
     }
   }, []);
-
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       setIsLoading(true);
@@ -111,13 +98,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     },
     []
   );
-
   const logout = useCallback(() => {
     api.setToken(null);
     setUser(null);
     localStorage.removeItem(USER_KEY);
   }, []);
-
   const updateProfile = useCallback(
     async (data: { name?: string; email?: string; phone?: string | null }) => {
       const updated = await api.updateMe(data);
@@ -127,7 +112,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     },
     []
   );
-
   return (
     <AuthContext.Provider
       value={{

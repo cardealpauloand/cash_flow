@@ -18,9 +18,7 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import CategoriesPage from "./pages/CategoriesPage";
 import CategoryCreatePage from "./pages/CategoryCreatePage";
-
 const queryClient = new QueryClient();
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="cashflow-theme">
@@ -107,5 +105,4 @@ const App = () => (
     </ThemeProvider>
   </QueryClientProvider>
 );
-
 export default App;

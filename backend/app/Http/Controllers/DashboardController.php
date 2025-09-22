@@ -17,7 +17,7 @@ class DashboardController extends Controller
         $start = $request->query('date_from', now()->startOfMonth()->toDateString());
         $end = $request->query('date_to', now()->endOfMonth()->toDateString());
 
-        // Base query for month (exclude transfers at root level for income/expense aggregates)
+
         $baseMonth = TransactionInstallment::query()
             ->join('transactions', 'transactions.id', '=', 'transactions_installments.transaction_id')
             ->where('transactions_installments.user_id', $userId)
@@ -32,7 +32,7 @@ class DashboardController extends Controller
             ->where('transactions.transaction_type_id', '!=', $transferId)
             ->sum('transactions_installments.value');
 
-        // Account balances (all time until today)
+
         $byAccount = TransactionInstallment::query()
             ->join('transactions', 'transactions.id', '=', 'transactions_installments.transaction_id')
             ->where('transactions_installments.user_id', $userId)
@@ -62,10 +62,10 @@ class DashboardController extends Controller
                 'name' => $acc->name,
                 'type' => $acc->type,
                 'balance' => round($balance, 2),
-                'percentage' => 0, // placeholder, fill after loop
+                'percentage' => 0,
             ];
         }
-        // Fill percentages
+
         foreach ($accountsOut as &$a) {
             if ($positiveTotal > 0 && $a['balance'] > 0) {
                 $a['percentage'] = round(($a['balance'] / $positiveTotal) * 100, 2);
@@ -76,7 +76,7 @@ class DashboardController extends Controller
         $totalBalance = array_reduce($accountsOut, fn($c, $a) => $c + $a['balance'], 0);
         $netFlow = $monthlyIncome - $monthlyExpenses;
 
-        // Recent transactions based on root transactions (ensures transfer appears once)
+
         $recentTx = \App\Models\Transaction::query()
             ->leftJoin('accounts as dest', 'dest.id', '=', 'transactions.account_id')
             ->leftJoin('accounts as orig', 'orig.id', '=', 'transactions.account_out_id')
