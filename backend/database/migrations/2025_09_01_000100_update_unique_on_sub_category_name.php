@@ -29,19 +29,48 @@ return new class extends Migration {
             DB::statement('INSERT INTO sub_category (id, name, category_id) SELECT id, name, category_id FROM sub_category_old_uniqfix');
             Schema::drop('sub_category_old_uniqfix');
         } else {
+            // On non-SQLite (e.g., Postgres), avoid issuing invalid drops inside a transaction.
+            // Detect existing constraint names and only drop when present.
+            if (DB::getDriverName() === 'pgsql') {
+                $hasUk = DB::selectOne(
+                    "select 1 from pg_constraint c join pg_class t on t.oid = c.conrelid join pg_namespace n on n.oid = t.relnamespace where c.contype = 'u' and t.relname = ? and c.conname = ? limit 1",
+                    ['sub_category', 'uk_sub_category_name']
+                );
+
+                if ($hasUk) {
+                    Schema::table('sub_category', function (Blueprint $table) {
+                        $table->dropUnique('uk_sub_category_name');
+                    });
+                }
+
+                $hasDefault = DB::selectOne(
+                    "select 1 from pg_constraint c join pg_class t on t.oid = c.conrelid join pg_namespace n on n.oid = t.relnamespace where c.contype = 'u' and t.relname = ? and c.conname = ? limit 1",
+                    ['sub_category', 'sub_category_name_unique']
+                );
+
+                if ($hasDefault) {
+                    Schema::table('sub_category', function (Blueprint $table) {
+                        $table->dropUnique(['name']);
+                    });
+                }
+            } else {
+                // Fallback for other drivers: attempt drops in isolation, catching errors.
+                try {
+                    Schema::table('sub_category', function (Blueprint $table) {
+                        $table->dropUnique('uk_sub_category_name');
+                    });
+                } catch (\Throwable $e) {
+                }
+
+                try {
+                    Schema::table('sub_category', function (Blueprint $table) {
+                        $table->dropUnique(['name']);
+                    });
+                } catch (\Throwable $e) {
+                }
+            }
+
             Schema::table('sub_category', function (Blueprint $table) {
-
-                try {
-                    $table->dropUnique('uk_sub_category_name');
-                } catch (\Throwable $e) {
-
-                }
-                try {
-                    $table->dropUnique(['name']);
-                } catch (\Throwable $e) {
-
-                }
-
                 $table->unique(['category_id', 'name'], 'uk_sub_category_cat_name');
             });
         }
@@ -65,12 +94,27 @@ return new class extends Migration {
             DB::statement('INSERT INTO sub_category (id, name, category_id) SELECT id, name, category_id FROM sub_category_old_uniqfix');
             Schema::drop('sub_category_old_uniqfix');
         } else {
-            Schema::table('sub_category', function (Blueprint $table) {
-                try {
-                    $table->dropUnique('uk_sub_category_cat_name');
-                } catch (\Throwable $e) {
+            if (DB::getDriverName() === 'pgsql') {
+                $hasComposite = DB::selectOne(
+                    "select 1 from pg_constraint c join pg_class t on t.oid = c.conrelid join pg_namespace n on n.oid = t.relnamespace where c.contype = 'u' and t.relname = ? and c.conname = ? limit 1",
+                    ['sub_category', 'uk_sub_category_cat_name']
+                );
 
+                if ($hasComposite) {
+                    Schema::table('sub_category', function (Blueprint $table) {
+                        $table->dropUnique('uk_sub_category_cat_name');
+                    });
                 }
+            } else {
+                try {
+                    Schema::table('sub_category', function (Blueprint $table) {
+                        $table->dropUnique('uk_sub_category_cat_name');
+                    });
+                } catch (\Throwable $e) {
+                }
+            }
+
+            Schema::table('sub_category', function (Blueprint $table) {
                 $table->unique('name', 'uk_sub_category_name');
             });
         }
