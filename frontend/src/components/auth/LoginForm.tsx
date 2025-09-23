@@ -54,8 +54,13 @@ export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
   return (
     <Card className="w-full max-w-md mx-auto shadow-hover">
       <CardHeader className="text-center space-y-1">
-        <div className="w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow animate-glow-pulse mx-auto mb-4">
-          <span className="text-primary-foreground font-bold text-2xl">CF</span>
+        <div className="w-48 h-20 md:w-64 md:h-24 rounded-xl flex items-center justify-center mx-auto mb-6 overflow-hidden transition-all">
+          <img
+            src="/logo.png"
+            alt="CashFlow"
+            className="w-full h-full object-contain select-none"
+            draggable={false}
+          />
         </div>
         <CardTitle className="text-2xl font-bold">Entrar</CardTitle>
         <CardDescription>
@@ -138,11 +143,7 @@ export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
           </p>
         </div>
 
-        <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-          <p className="text-xs text-muted-foreground text-center">
-            <strong>Demo:</strong> admin@cashflow.com / 123456
-          </p>
-        </div>
+        {/* Demo credentials removed */}
       </CardContent>
     </Card>
   );
