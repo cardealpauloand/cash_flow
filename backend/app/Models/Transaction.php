@@ -3,6 +3,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Transaction extends Model
 {
@@ -24,26 +26,37 @@ class Transaction extends Model
     ];
 
     protected $casts = [
+        'id' => 'int',
+        'value' => 'decimal:2',
+        'transaction_type_id' => 'int',
         'date' => 'date',
+        'account_id' => 'int',
+        'account_out_id' => 'int',
+        'user_id' => 'int',
+        'created_at' => 'datetime',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
-    public function account()
+
+    public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'account_id');
     }
-    public function accountOut()
+
+    public function accountOut(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'account_out_id');
     }
-    public function type()
+
+    public function type(): BelongsTo
     {
         return $this->belongsTo(TransactionType::class, 'transaction_type_id');
     }
-    public function installments()
+
+    public function installments(): HasMany
     {
         return $this->hasMany(TransactionInstallment::class);
     }

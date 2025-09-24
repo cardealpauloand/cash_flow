@@ -91,6 +91,18 @@ class CategoryController extends Controller
 
     public function destroy(Category $category)
     {
+        if ($category->transactionCategories()->exists()) {
+            return response()->json(['error' => 'Não é possível excluir a categoria. Ela está sendo usada em transações.'], 400);
+        }
+
+        $subCategoriesInUse = $category->subCategories()
+            ->whereHas('transactionCategories')
+            ->exists();
+
+        if ($subCategoriesInUse) {
+            return response()->json(['error' => 'Não é possível excluir a categoria. Uma ou mais subcategorias estão sendo usadas em transações.'], 400);
+        }
+
         $category->delete();
         return response()->json(['deleted' => true]);
     }
