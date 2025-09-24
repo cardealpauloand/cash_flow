@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InstallmentListItem } from "@/lib/api";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 function mapType(id: number): "income" | "expense" | "transfer" {
   if (id === 1) return "income";
   if (id === 2) return "expense";
@@ -44,6 +44,7 @@ interface TransactionsTableProps {
   formatDate: (date: string) => string;
   onEdit: (inst: InstallmentListItem) => void;
   onDelete: (inst: InstallmentListItem) => void;
+  shouldCloseMenus?: boolean;
 }
 export const TransactionsTable = ({
   installments,
@@ -53,7 +54,14 @@ export const TransactionsTable = ({
   formatDate,
   onEdit,
   onDelete,
+  shouldCloseMenus,
 }: TransactionsTableProps) => {
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  useEffect(() => {
+    if (shouldCloseMenus) {
+      setOpenMenuId(null);
+    }
+  }, [shouldCloseMenus]);
   const displayInstallments = useMemo(() => {
     const result: InstallmentListItem[] = [];
     const seenTransferTx = new Set<number>();
@@ -156,7 +164,12 @@ export const TransactionsTable = ({
                       {t(transactionLabels[logicalType])}
                     </Badge>
                   </div>
-                  <DropdownMenu>
+                  <DropdownMenu
+                    open={openMenuId === inst.id}
+                    onOpenChange={(open) =>
+                      setOpenMenuId(open ? inst.id : null)
+                    }
+                  >
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
@@ -168,14 +181,20 @@ export const TransactionsTable = ({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">
                       <DropdownMenuItem
-                        onClick={() => onEdit(inst)}
+                        onClick={() => {
+                          setOpenMenuId(null);
+                          onEdit(inst);
+                        }}
                         className="cursor-pointer hover:bg-primary/10"
                       >
                         <Edit className="w-4 h-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => onDelete(inst)}
+                        onClick={() => {
+                          setOpenMenuId(null);
+                          onDelete(inst);
+                        }}
                         className="cursor-pointer hover:bg-destructive/10 text-destructive focus:text-destructive"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />

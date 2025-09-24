@@ -44,7 +44,7 @@ import {
 import { useApp } from "@/contexts/AppContext";
 import TransactionForm from "@/components/forms/TransactionForm";
 import { SubCategory as UI_SubCategory } from "@/components/forms/SubCategoryManager";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +69,12 @@ const TransactionsPage = () => {
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [accountFilter, setAccountFilter] = useState<number | undefined>();
   const [page, setPage] = useState(1);
+  const [isNewTxMenuOpen, setIsNewTxMenuOpen] = useState(false);
+  useEffect(() => {
+    if (isModalOpen || isEditModalOpen || deletingTx) {
+      setIsNewTxMenuOpen(false);
+    }
+  }, [isModalOpen, isEditModalOpen, deletingTx]);
   const filters = { type: typeFilter, account_id: accountFilter, page };
   const tx = useTransactions(filters);
   const accounts = useAccounts();
@@ -249,7 +255,10 @@ const TransactionsPage = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <DropdownMenu>
+            <DropdownMenu
+              open={isNewTxMenuOpen}
+              onOpenChange={setIsNewTxMenuOpen}
+            >
               <DropdownMenuTrigger asChild>
                 <Button className="bg-gradient-income hover:scale-105 transition-all duration-200 shadow-card">
                   <Plus size={16} className="mr-2" />
@@ -261,6 +270,7 @@ const TransactionsPage = () => {
                   onClick={() => {
                     setNewTxType("expense");
                     setIsModalOpen(true);
+                    setIsNewTxMenuOpen(false);
                   }}
                 >
                   {t("expense")}
@@ -269,6 +279,7 @@ const TransactionsPage = () => {
                   onClick={() => {
                     setNewTxType("transfer");
                     setIsModalOpen(true);
+                    setIsNewTxMenuOpen(false);
                   }}
                 >
                   {t("transfer")}
@@ -277,6 +288,7 @@ const TransactionsPage = () => {
                   onClick={() => {
                     setNewTxType("income");
                     setIsModalOpen(true);
+                    setIsNewTxMenuOpen(false);
                   }}
                 >
                   {t("income")}
@@ -525,6 +537,9 @@ const TransactionsPage = () => {
           formatDate={formatDate}
           onEdit={handleEditTransaction}
           onDelete={(inst) => setDeletingTx(inst)}
+          shouldCloseMenus={
+            isModalOpen || isEditModalOpen || !!deletingTx
+          }
         />
       </div>
     </Layout>

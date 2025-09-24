@@ -18,7 +18,9 @@ export const UserMenu = () => {
   const { user, logout } = useAuth();
   const { t } = useApp();
   const { toast } = useToast();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const handleLogout = () => {
+    setIsMenuOpen(false);
     logout();
     toast({
       title: "Até logo!",
@@ -35,7 +37,7 @@ export const UserMenu = () => {
   };
   if (!user) return null;
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
@@ -57,13 +59,21 @@ export const UserMenu = () => {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="cursor-pointer" asChild>
-          <Link to="/profile" className="flex items-center">
+          <Link
+            to="/profile"
+            className="flex items-center"
+            onClick={() => setIsMenuOpen(false)}
+          >
             <User className="mr-2 h-4 w-4" />
             <span>Perfil</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer" asChild>
-          <Link to="/settings" className="flex items-center">
+          <Link
+            to="/settings"
+            className="flex items-center"
+            onClick={() => setIsMenuOpen(false)}
+          >
             <Settings className="mr-2 h-4 w-4" />
             <span>{t("settings")}</span>
           </Link>
