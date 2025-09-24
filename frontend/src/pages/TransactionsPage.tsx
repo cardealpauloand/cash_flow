@@ -537,9 +537,7 @@ const TransactionsPage = () => {
           formatDate={formatDate}
           onEdit={handleEditTransaction}
           onDelete={(inst) => setDeletingTx(inst)}
-          shouldCloseMenus={
-            isModalOpen || isEditModalOpen || !!deletingTx
-          }
+          shouldCloseMenus={isModalOpen || isEditModalOpen || !!deletingTx}
         />
       </div>
     </Layout>
