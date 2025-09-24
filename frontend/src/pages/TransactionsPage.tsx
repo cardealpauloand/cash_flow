@@ -242,6 +242,28 @@ const TransactionsPage = () => {
     }
     setDeletingTx(null);
   };
+  const getEditDialogTitle = (transaction: InstallmentListItem) => {
+    const type = mapType(transaction.root_transaction_type_id);
+    switch (type) {
+      case "income":
+        return "Editar Receita";
+      case "expense":
+        return "Editar Despesa";
+      case "transfer":
+        return "Editar Transferência";
+      default:
+        return "Editar Transação";
+    }
+  };
+
+  const getEditDialogDescription = (transaction: InstallmentListItem) => {
+    const type = mapType(transaction.root_transaction_type_id);
+    if (type === "transfer") {
+      return "Editando transferência";
+    }
+    return `Editando parcela #${transaction.id}`;
+  };
+
   return (
     <Layout>
       <div className="space-y-8 animate-fade-in">
@@ -321,13 +343,13 @@ const TransactionsPage = () => {
                   onCancel={() => setIsModalOpen(false)}
                   initialData={
                     newTxType
-                      ? ({
+                      ? {
                           type: newTxType,
                           amount: 0,
                           description: "",
                           account: "",
                           date: new Date().toISOString().slice(0, 10),
-                        } as any)
+                        }
                       : undefined
                   }
                   forcedType={newTxType ?? undefined}
@@ -354,9 +376,9 @@ const TransactionsPage = () => {
             {isEditModalOpen && editingTx && (
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Editar transação</DialogTitle>
+                  <DialogTitle>{getEditDialogTitle(editingTx)}</DialogTitle>
                   <DialogDescription>
-                    Editando parcela #{editingTx.id}
+                    {getEditDialogDescription(editingTx)}
                   </DialogDescription>
                 </DialogHeader>
                 <TransactionForm

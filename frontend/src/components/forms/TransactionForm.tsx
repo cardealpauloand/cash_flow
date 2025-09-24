@@ -73,6 +73,7 @@ interface TransactionFormProps {
   isEditing?: boolean;
   forcedType?: "income" | "expense" | "transfer";
   titleOverride?: string;
+  hasTitle?: boolean;
 }
 const TransactionForm = ({
   onSubmit,
@@ -81,13 +82,12 @@ const TransactionForm = ({
   isEditing = false,
   forcedType,
   titleOverride,
+  hasTitle = false,
 }: TransactionFormProps) => {
   const formRef = useRef<FormHandles>(null);
   const [date, setDate] = useState<Date>(
     initialData?.date ? new Date(initialData.date) : new Date()
   );
-  const [tags, setTags] = useState<string[]>(initialData?.tags || []);
-  const [newTag, setNewTag] = useState("");
   const [subCategories, setSubCategories] = useState<SubCategory[]>(
     initialData?.subCategories || []
   );
@@ -118,14 +118,37 @@ const TransactionForm = ({
       setIsTransfer((forcedType || initialData.type) === "transfer");
     }
   }, [initialData, forcedType]);
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag("");
+
+  const getFormTitle = useMemo(() => {
+    if (titleOverride) return titleOverride;
+
+    const currentType = forcedType || initialData?.type || "transaction";
+
+    if (isEditing) {
+      switch (currentType) {
+        case "income":
+          return "Editar Receita";
+        case "expense":
+          return "Editar Despesa";
+        case "transfer":
+          return "Editar Transferência";
+        default:
+          return "Editar Transação";
+      }
+    } else {
+      switch (currentType) {
+        case "income":
+          return "Nova Receita";
+        case "expense":
+          return "Nova Despesa";
+        case "transfer":
+          return "Nova Transferência";
+        default:
+          return "Nova Transação";
+      }
     }
-  };
-  const handleRemoveTag = (tagToRemove: string) =>
-    setTags(tags.filter((t) => t !== tagToRemove));
+  }, [titleOverride, isEditing, forcedType, initialData?.type]);
+
   const internalSubmit = useCallback(
     (data: {
       type: string;
@@ -176,7 +199,6 @@ const TransactionForm = ({
         account: data.account,
         account_out_id: data.account_out_id,
         date: format(date, "yyyy-MM-dd"),
-        tags: tags.length ? tags : undefined,
         subCategories: subCategories.length ? subCategories : undefined,
         installments_count:
           installmentsEnabled && installmentsCount > 1
@@ -188,23 +210,27 @@ const TransactionForm = ({
     [
       subCategories,
       date,
-      tags,
       onSubmit,
       initialData?.id,
+      initialData?.description,
+      initialData?.type,
       installmentsEnabled,
       installmentsCount,
       dashboard,
       forcedType,
+      isEditing,
+      isTransfer,
     ]
   );
   return (
     <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle>
-          {titleOverride || (isEditing ? "Editar Transação" : "Nova Transação")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+      {hasTitle && (
+        <CardHeader>
+          <CardTitle>{getFormTitle}</CardTitle>
+        </CardHeader>
+      )}
+
+      <CardContent className="mt-5">
         <Form
           ref={formRef}
           onSubmit={internalSubmit}
@@ -299,19 +325,7 @@ const TransactionForm = ({
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <UnformSelect
-                    name="type"
-                    label="Tipo"
-                    required
-                    placeholder="Selecione o tipo"
-                    onChangeValue={(v) => setIsTransfer(v === "transfer")}
-                    defaultValue={initialData?.type}
-                  >
-                    <SelectItem value="income">Receita</SelectItem>
-                    <SelectItem value="expense">Despesa</SelectItem>
-                    <SelectItem value="transfer">Transferência</SelectItem>
-                  </UnformSelect>
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                   <UnformInput
                     name="amount"
                     label="Valor"
@@ -322,13 +336,6 @@ const TransactionForm = ({
                   />
                 </div>
               )}
-
-              <UnformInput
-                name="description"
-                label="Descrição"
-                placeholder="Descreva a transação"
-                required
-              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <UnformSelect
@@ -441,48 +448,12 @@ const TransactionForm = ({
                 <div className="text-sm text-destructive">{formError}</div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="tags">Tags</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    id="tags"
-                    placeholder="Adicionar tag"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={(e) =>
-                      e.key === "Enter" && (e.preventDefault(), handleAddTag())
-                    }
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddTag}
-                    size="icon"
-                    variant="outline"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="flex items-center space-x-1"
-                      >
-                        <span>{tag}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTag(tag)}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <UnformInput
+                name="description"
+                label="Descrição"
+                placeholder="Descreva a transação"
+                required
+              />
 
               <SubCategoryManager
                 subCategories={subCategories}
@@ -493,48 +464,6 @@ const TransactionForm = ({
                   ) || 0
                 }
               />
-
-              <div className="space-y-2 p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <input
-                    id="enableInstallments"
-                    type="checkbox"
-                    className="h-4 w-4"
-                    checked={installmentsEnabled}
-                    onChange={(e) => setInstallmentsEnabled(e.target.checked)}
-                    disabled={isTransfer}
-                  />
-                  <Label
-                    htmlFor="enableInstallments"
-                    className="cursor-pointer"
-                  >
-                    Parcelar (backend divide valor igualmente)
-                  </Label>
-                </div>
-                {installmentsEnabled && !isTransfer && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1 sm:col-span-1">
-                      <Label htmlFor="installmentsCount">Nº Parcelas</Label>
-                      <Input
-                        id="installmentsCount"
-                        type="number"
-                        min={2}
-                        max={60}
-                        value={installmentsCount}
-                        onChange={(e) =>
-                          setInstallmentsCount(
-                            Math.max(2, parseInt(e.target.value) || 2)
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="sm:col-span-2 text-sm text-muted-foreground flex items-end">
-                      O backend criará {installmentsCount} parcelas. A última
-                      pode ajustar centavos.
-                    </div>
-                  </div>
-                )}
-              </div>
             </>
           )}
 
