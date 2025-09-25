@@ -26,7 +26,8 @@ const UnformSelect = ({
   onChangeValue,
 }: UnformSelectProps) => {
   const hiddenRef = useRef<HTMLInputElement | null>(null);
-  const { fieldName, defaultValue: dv, registerField, error } = useField(name);
+  const { fieldName, defaultValue: dv, registerField, error, clearError } =
+    useField(name);
   const [value, setValue] = useState<string | undefined>(
     defaultValue || (dv as string) || undefined
   );
@@ -52,8 +53,12 @@ const UnformSelect = ({
         onValueChange={(v) => {
           setValue(v);
           onChangeValue?.(v);
+          clearError();
         }}
         required={required}
+        onOpenChange={(open) => {
+          if (open) clearError();
+        }}
       >
         <SelectTrigger>
           <SelectValue placeholder={placeholder} />

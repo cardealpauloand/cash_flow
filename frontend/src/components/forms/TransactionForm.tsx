@@ -148,6 +148,7 @@ const TransactionForm = ({
       account: string;
       account_out_id?: string;
     }) => {
+      formRef.current?.setErrors({});
       setFormError("");
       const typeToUse = isTransfer
         ? "transfer"
@@ -155,12 +156,44 @@ const TransactionForm = ({
             | "income"
             | "expense"
             | "transfer");
+      const errors: Record<string, string> = {};
+      const normalizedAccount = data.account?.toString().trim();
+      const normalizedOriginAccount = data.account_out_id?.toString().trim();
+      const normalizedDescription = data.description?.trim();
+
+      if (!data.amount) {
+        errors.amount = "Informe um valor válido.";
+      }
+
+      if (!normalizedAccount) {
+        errors.account =
+          typeToUse === "transfer"
+            ? "Selecione a conta de destino."
+            : "Selecione a conta.";
+      }
+
+      if (typeToUse === "transfer" && !normalizedOriginAccount) {
+        errors.account_out_id = "Selecione a conta de origem.";
+      }
+
+      // if (!normalizedDescription) {
+      //   errors.description = "Informe uma descrição.";
+      // }
+
+      if (Object.keys(errors).length) {
+        Object.entries(errors).forEach(([field, message]) => {
+          console.warn(`Campo obrigatório ausente: ${field} -> ${message}`);
+        });
+        formRef.current?.setErrors(errors);
+        return;
+      }
+
       let finalAmount: number = parseFloat(data.amount);
       if (!isEditing && typeToUse !== "transfer" && subCategories.length > 0) {
         finalAmount = subCategories.reduce((sum, s) => sum + s.value, 0);
       }
       if (!isFinite(finalAmount) || finalAmount <= 0) {
-        setFormError("Informe um valor válido.");
+        formRef.current?.setErrors({ amount: "Informe um valor válido." });
         return;
       }
       if (typeToUse === "transfer") {
@@ -183,11 +216,11 @@ const TransactionForm = ({
       const payload: TransactionFormSubmitPayload = {
         ...(initialData?.id && { id: initialData.id }),
         type: typeToUse,
-        description: data.description ?? initialData?.description ?? "",
+        description: normalizedDescription ?? initialData?.description ?? "",
         amount: finalAmount,
         category: data.category || undefined,
-        account: data.account,
-        account_out_id: data.account_out_id,
+        account: normalizedAccount || data.account,
+        account_out_id: normalizedOriginAccount,
         date: format(date, "yyyy-MM-dd"),
         subCategories: subCategories.length ? subCategories : undefined,
       };
@@ -235,12 +268,7 @@ const TransactionForm = ({
                     type="number"
                     step="0.01"
                     placeholder="0,00"
-                    required
                   />
-
-                  {formError && (
-                    <div className="text-sm text-destructive">{formError}</div>
-                  )}
 
                   <UnformSelect
                     name="category"
@@ -268,7 +296,6 @@ const TransactionForm = ({
                   <UnformSelect
                     name="account_out_id"
                     label="Conta de origem"
-                    required
                     placeholder="Selecione a conta de origem"
                     defaultValue={initialData?.account_out_id}
                   >
@@ -281,7 +308,6 @@ const TransactionForm = ({
                   <UnformSelect
                     name="account"
                     label="Conta de destino"
-                    required
                     placeholder="Selecione a conta de destino"
                     defaultValue={initialData?.account}
                   >
@@ -310,7 +336,6 @@ const TransactionForm = ({
                     type="number"
                     step="0.01"
                     placeholder="0,00"
-                    required
                   />
                 </div>
               ) : (
@@ -321,7 +346,6 @@ const TransactionForm = ({
                     type="number"
                     step="0.01"
                     placeholder="0,00"
-                    required
                   />
                 </div>
               )}
@@ -353,7 +377,6 @@ const TransactionForm = ({
                 <UnformSelect
                   name="account"
                   label={isTransfer ? "Conta (destino)" : "Conta"}
-                  required
                   placeholder={
                     isTransfer
                       ? "Selecione a conta de destino"
@@ -371,7 +394,6 @@ const TransactionForm = ({
                   <UnformSelect
                     name="account_out_id"
                     label="Conta de origem"
-                    required
                     placeholder="Selecione a conta de origem"
                     defaultValue={initialData?.account_out_id}
                   >
@@ -437,7 +459,6 @@ const TransactionForm = ({
                 name="description"
                 label="Descrição"
                 placeholder="Descreva a transação"
-                required
               />
 
               <SubCategoryManager

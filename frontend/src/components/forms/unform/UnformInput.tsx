@@ -9,7 +9,9 @@ export interface UnformInputProps
 }
 const UnformInput = ({ name, label, className, ...rest }: UnformInputProps) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { fieldName, defaultValue, registerField, error } = useField(name);
+  const { fieldName, defaultValue, registerField, error, clearError } =
+    useField(name);
+  const { onFocus, ...inputProps } = rest;
   useEffect(() => {
     registerField({
       name: fieldName,
@@ -31,7 +33,11 @@ const UnformInput = ({ name, label, className, ...rest }: UnformInputProps) => {
         ref={inputRef}
         defaultValue={defaultValue}
         className={className}
-        {...rest}
+        onFocus={(event) => {
+          clearError();
+          onFocus?.(event);
+        }}
+        {...inputProps}
       />
       {error && <span className="text-xs text-destructive">{error}</span>}
     </div>
