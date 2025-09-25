@@ -161,7 +161,11 @@ const TransactionForm = ({
       const normalizedOriginAccount = data.account_out_id?.toString().trim();
       const normalizedDescription = data.description?.trim();
 
-      if (!data.amount) {
+      if (
+        !data.amount ||
+        isNaN(parseFloat(data.amount)) ||
+        parseFloat(data.amount) <= 0
+      ) {
         errors.amount = "Informe um valor válido.";
       }
 
@@ -175,10 +179,6 @@ const TransactionForm = ({
       if (typeToUse === "transfer" && !normalizedOriginAccount) {
         errors.account_out_id = "Selecione a conta de origem.";
       }
-
-      // if (!normalizedDescription) {
-      //   errors.description = "Informe uma descrição.";
-      // }
 
       if (Object.keys(errors).length) {
         Object.entries(errors).forEach(([field, message]) => {
