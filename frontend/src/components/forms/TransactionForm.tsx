@@ -7,17 +7,9 @@ import {
   Fragment,
 } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SelectItem } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -91,9 +83,7 @@ const TransactionForm = ({
   const [subCategories, setSubCategories] = useState<SubCategory[]>(
     initialData?.subCategories || []
   );
-  const [installmentsEnabled, setInstallmentsEnabled] =
-    useState<boolean>(false);
-  const [installmentsCount, setInstallmentsCount] = useState<number>(2);
+
   const ref = useReferenceData();
   const accounts = useAccounts();
   const { data: dashboard } = useQuery<DashboardSummary>({
@@ -200,10 +190,6 @@ const TransactionForm = ({
         account_out_id: data.account_out_id,
         date: format(date, "yyyy-MM-dd"),
         subCategories: subCategories.length ? subCategories : undefined,
-        installments_count:
-          installmentsEnabled && installmentsCount > 1
-            ? installmentsCount
-            : undefined,
       };
       onSubmit(payload);
     },
@@ -214,8 +200,6 @@ const TransactionForm = ({
       initialData?.id,
       initialData?.description,
       initialData?.type,
-      installmentsEnabled,
-      installmentsCount,
       dashboard,
       forcedType,
       isEditing,
@@ -253,6 +237,11 @@ const TransactionForm = ({
                     placeholder="0,00"
                     required
                   />
+
+                  {formError && (
+                    <div className="text-sm text-destructive">{formError}</div>
+                  )}
+
                   <UnformSelect
                     name="category"
                     label="Categoria"
@@ -443,10 +432,6 @@ const TransactionForm = ({
                   </PopoverContent>
                 </Popover>
               </div>
-
-              {formError && (
-                <div className="text-sm text-destructive">{formError}</div>
-              )}
 
               <UnformInput
                 name="description"
